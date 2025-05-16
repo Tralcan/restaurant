@@ -5,7 +5,7 @@ import Image from 'next/image';
 import type { FindRestaurantsWithAmbianceOutput } from '@/ai/flows/find-restaurants-with-ambiance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { MapPin, Utensils } from 'lucide-react';
+import { MapPin, Phone, Utensils } from 'lucide-react'; // Added Phone icon
 
 type Restaurant = FindRestaurantsWithAmbianceOutput[0];
 
@@ -44,9 +44,15 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
             </CardDescription>
           )}
            <div className="flex items-center text-sm text-muted-foreground mb-2">
-            <MapPin className="w-4 h-4 mr-2 text-accent" />
+            <MapPin className="w-4 h-4 mr-2 text-accent shrink-0" />
             <span>{restaurant.address}</span>
           </div>
+          {restaurant.phoneNumber && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Phone className="w-4 h-4 mr-2 text-accent shrink-0" />
+              <span>{restaurant.phoneNumber}</span>
+            </div>
+          )}
         </div>
         
       </CardContent>
