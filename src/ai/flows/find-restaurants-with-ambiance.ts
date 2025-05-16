@@ -27,7 +27,7 @@ const RestaurantSchema = z.object({
   phoneNumber: z.string().optional().describe('El número de teléfono del restaurante.'),
   description: z.string().optional().describe('Una breve descripción del restaurante.'),
   rating: z.number().min(1).max(5).optional().describe('La calificación del restaurante, de 1 a 5 estrellas (puede ser decimal, ej. 4.5). Simula datos de sitios como Google o TripAdvisor.'),
-  reviewCount: z.number().int().positive().optional().describe('El número total de reseñas que tiene el restaurante.'),
+  reviewCount: z.number().int().min(0).optional().describe('El número total de reseñas que tiene el restaurante.'),
 });
 
 const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).describe('Un arreglo de restaurantes que coinciden con los criterios.');
@@ -62,7 +62,7 @@ const findRestaurantsPrompt = ai.definePrompt({
     - phoneNumber: El número de teléfono del restaurante. (ej., (555) 123-4567)
     - description: Una breve descripción del restaurante.
     - rating: Un número entre 1 y 5 (puede ser decimal, ej. 4, 3.5, 4.8) que represente la calificación promedio del restaurante.
-    - reviewCount: Un número entero positivo que represente la cantidad de reseñas recibidas por el restaurante.
+    - reviewCount: Un número entero no negativo que represente la cantidad de reseñas recibidas por el restaurante.
   `,
 });
 
@@ -77,3 +77,4 @@ const findRestaurantsWithAmbianceFlow = ai.defineFlow(
     return output!;
   }
 );
+
