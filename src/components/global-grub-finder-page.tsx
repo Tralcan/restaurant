@@ -39,9 +39,9 @@ export default function GlobalGrubFinderPage() {
   useEffect(() => {
     if (selectedCuisine) {
       setError(null);
-      setSubCuisines([ALL_SUBCUISINES_OPTION]); // Reset with "All"
-      setSelectedSubCuisine(ALL_SUBCUISINES_OPTION); // Default to "All"
-      setRestaurants([]);
+      setRestaurants([]); // Clear restaurants when cuisine changes
+      setSubCuisines([ALL_SUBCUISINES_OPTION]); 
+      setSelectedSubCuisine(ALL_SUBCUISINES_OPTION); 
       startSubCuisinesTransition(async () => {
         try {
           const result = await getSubCuisines({ cuisine: selectedCuisine });
@@ -69,11 +69,26 @@ export default function GlobalGrubFinderPage() {
         }
       });
     } else {
-      // Reset if no main cuisine is selected
       setSubCuisines([ALL_SUBCUISINES_OPTION]);
       setSelectedSubCuisine(ALL_SUBCUISINES_OPTION);
+      setRestaurants([]); // Clear restaurants if no cuisine is selected
+      setError(null);
     }
   }, [selectedCuisine, toast]);
+
+  useEffect(() => {
+    // Clear previous search results and errors when sub-cuisine changes
+    if (selectedCuisine) { // Only clear if a main cuisine is selected, to avoid clearing on initial load/reset
+        setRestaurants([]);
+        setError(null);
+    }
+  }, [selectedSubCuisine]);
+
+  useEffect(() => {
+    // Clear previous search results and errors when city changes
+    setRestaurants([]);
+    setError(null);
+  }, [city]);
 
   const handleFindRestaurants = () => {
     if (!selectedCuisine || !selectedSubCuisine || !city) {
@@ -167,7 +182,7 @@ export default function GlobalGrubFinderPage() {
                 </div>
               </SelectTrigger>
               <SelectContent className="bg-popover text-popover-foreground">
-                {isSubCuisinesLoading && subCuisines.length <= 1 ? ( // Show loader only if "All" is the only item
+                {isSubCuisinesLoading && subCuisines.length <= 1 ? ( 
                   <div className="flex justify-center p-4">
                     <Loader size={20} />
                   </div>
@@ -178,7 +193,7 @@ export default function GlobalGrubFinderPage() {
                     </SelectItem>
                   ))
                 )}
-                {!isSubCuisinesLoading && subCuisines.length === 1 && selectedCuisine && ( // Only "All" is present
+                {!isSubCuisinesLoading && subCuisines.length === 1 && selectedCuisine && ( 
                    <p className="p-4 text-sm text-muted-foreground">No specific sub-cuisines found. Searching "All {selectedCuisine}".</p>
                 )}
               </SelectContent>
