@@ -19,7 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark"> {/* Force dark theme */}
+    <html lang="en" className="dark">
+      {/* Force dark theme by applying 'dark' class to <html> */}
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
         <Toaster /> {/* Add Toaster for notifications */}
