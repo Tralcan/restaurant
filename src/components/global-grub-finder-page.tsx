@@ -17,6 +17,7 @@ import { getSubCuisines, type GetSubCuisinesOutput } from '@/ai/flows/get-sub-cu
 import { findRestaurantsWithAmbiance, type FindRestaurantsWithAmbianceOutput } from '@/ai/flows/find-restaurants-with-ambiance';
 import { AlertCircle, UtensilsCrossed, Search, MapPin } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
 
 
 export default function GlobalGrubFinderPage() {
