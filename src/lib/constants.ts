@@ -1,0 +1,18 @@
+export const CUISINE_TYPES = [
+  'Italian',
+  'Mexican',
+  'Indian',
+  'Japanese',
+  'Chinese',
+  'French',
+  'Spanish',
+  'Thai',
+  'Greek',
+  'Middle Eastern',
+  'American',
+  'Vietnamese',
+  'Korean',
+  'Brazilian',
+  'Caribbean',
+  'African',
+];
