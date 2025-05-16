@@ -1,3 +1,4 @@
+
 // src/ai/flows/find-restaurants-with-ambiance.ts
 'use server';
 /**
@@ -20,7 +21,7 @@ export type FindRestaurantsWithAmbianceInput = z.infer<typeof FindRestaurantsWit
 
 const RestaurantSchema = z.object({
   name: z.string().describe('The name of the restaurant.'),
-  imageUrl: z.string().describe('URL of an image showing the restaurant ambiance, preferably at night.'),
+  imageUrl: z.string().describe("URL of an image showing the restaurant ambiance. MUST be 'https://placehold.co/600x400.png'."),
   address: z.string().describe('The address of the restaurant.'),
   description: z.string().optional().describe('A short description of the restaurant.'),
 });
@@ -37,14 +38,16 @@ const findRestaurantsPrompt = ai.definePrompt({
   input: {schema: FindRestaurantsWithAmbianceInputSchema},
   output: {schema: FindRestaurantsWithAmbianceOutputSchema},
   prompt: `You are a restaurant finder AI. Find restaurants based on the cuisine and sub-cuisine specified by the user.
-    Prioritize restaurants that have images showing people in a night-time dining setting.  Return a JSON array of restaurants.
+    You should try to provide diverse and realistic-sounding restaurant names and addresses.
+    For the 'imageUrl', you MUST use 'https://placehold.co/600x400.png' for every restaurant. Do not attempt to find or generate any other image URLs.
+    Return a JSON array of restaurants.
 
     Cuisine: {{{cuisine}}}
     Sub-Cuisine: {{{subCuisine}}}
 
     Each restaurant object in the array should include:
     - name: The name of the restaurant.
-    - imageUrl: URL of an image showing the restaurant ambiance, preferably at night.
+    - imageUrl: This MUST be the exact string 'https://placehold.co/600x400.png'.
     - address: The address of the restaurant.
     - description: A short description of the restaurant.
   `,

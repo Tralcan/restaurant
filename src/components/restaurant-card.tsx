@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from 'next/image';
@@ -17,7 +18,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out flex flex-col h-full bg-card/80 backdrop-blur-sm">
       <div className="relative w-full h-48 md:h-56">
         <Image
-          src={restaurant.imageUrl || `https://placehold.co/600x400.png?text=${encodeURIComponent(restaurant.name)}`}
+          src={restaurant.imageUrl || 'https://placehold.co/600x400.png'}
           alt={`Ambiance of ${restaurant.name}`}
           layout="fill"
           objectFit="cover"
@@ -26,8 +27,8 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
           onError={(e) => {
             // Fallback to placeholder if image fails to load
             const target = e.target as HTMLImageElement;
-            target.srcset = `https://placehold.co/600x400.png?text=${encodeURIComponent(restaurant.name)}`;
-            target.src = `https://placehold.co/600x400.png?text=${encodeURIComponent(restaurant.name)}`;
+            target.srcset = 'https://placehold.co/600x400.png';
+            target.src = 'https://placehold.co/600x400.png';
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
