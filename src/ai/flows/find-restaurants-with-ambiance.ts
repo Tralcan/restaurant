@@ -2,33 +2,33 @@
 // src/ai/flows/find-restaurants-with-ambiance.ts
 'use server';
 /**
- * @fileOverview This file defines a Genkit flow to find restaurants matching a specified cuisine, sub-cuisine (optional), and city,
- * prioritizing results with images that depict a night-time dining atmosphere.
+ * @fileOverview Este archivo define un flujo de Genkit para encontrar restaurantes que coincidan con una cocina, sub-cocina (opcional) y ciudad especificadas,
+ * priorizando resultados con imágenes que representen un ambiente de cena nocturno.
  *
- * - findRestaurantsWithAmbiance -  A function to initiate the restaurant search flow.
- * - FindRestaurantsWithAmbianceInput - The input type for the findRestaurantsWithAmbiance function.
- * - FindRestaurantsWithAmbianceOutput - The output type for the findRestaurantsWithAmbiance function.
+ * - findRestaurantsWithAmbiance -  Una función para iniciar el flujo de búsqueda de restaurantes.
+ * - FindRestaurantsWithAmbianceInput - El tipo de entrada para la función findRestaurantsWithAmbiance.
+ * - FindRestaurantsWithAmbianceOutput - El tipo de salida para la función findRestaurantsWithAmbiance.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const FindRestaurantsWithAmbianceInputSchema = z.object({
-  cuisine: z.string().describe('The type of cuisine (e.g., Italian, Mexican).'),
-  subCuisine: z.string().optional().describe('The specific sub-cuisine (e.g., pizza, tacos). If empty or not provided, search for all sub-cuisines of the main cuisine type.'),
-  city: z.string().describe('The city where the user wants to find restaurants.'),
+  cuisine: z.string().describe('El tipo de cocina (ej., Italiana, Mexicana).'),
+  subCuisine: z.string().optional().describe('La sub-cocina específica (ej., pizza, tacos). Si está vacío o no se proporciona, busca todas las sub-cocinas del tipo de cocina principal.'),
+  city: z.string().describe('La ciudad donde el usuario quiere encontrar restaurantes.'),
 });
 export type FindRestaurantsWithAmbianceInput = z.infer<typeof FindRestaurantsWithAmbianceInputSchema>;
 
 const RestaurantSchema = z.object({
-  name: z.string().describe('The name of the restaurant.'),
-  imageUrl: z.string().describe("URL of an image. MUST be 'https://placehold.co/600x400.png'. This image should conceptually represent a customer photo or a website image of the restaurant, focusing on a night-time dining ambiance with people if possible."),
-  address: z.string().describe('The address of the restaurant.'),
-  phoneNumber: z.string().optional().describe('The phone number of the restaurant.'),
-  description: z.string().optional().describe('A short description of the restaurant.'),
+  name: z.string().describe('El nombre del restaurante.'),
+  imageUrl: z.string().describe("URL de una imagen. DEBE ser 'https://placehold.co/600x400.png'. Esta imagen debe representar conceptualmente una foto de un cliente o una imagen del sitio web del restaurante, centrándose en un ambiente de cena nocturno con personas si es posible."),
+  address: z.string().describe('La dirección del restaurante.'),
+  phoneNumber: z.string().optional().describe('El número de teléfono del restaurante.'),
+  description: z.string().optional().describe('Una breve descripción del restaurante.'),
 });
 
-const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).describe('An array of restaurants matching the criteria.');
+const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).describe('Un arreglo de restaurantes que coinciden con los criterios.');
 export type FindRestaurantsWithAmbianceOutput = z.infer<typeof FindRestaurantsWithAmbianceOutputSchema>;
 
 export async function findRestaurantsWithAmbiance(input: FindRestaurantsWithAmbianceInput): Promise<FindRestaurantsWithAmbianceOutput> {
@@ -39,26 +39,26 @@ const findRestaurantsPrompt = ai.definePrompt({
   name: 'findRestaurantsPrompt',
   input: {schema: FindRestaurantsWithAmbianceInputSchema},
   output: {schema: FindRestaurantsWithAmbianceOutputSchema},
-  prompt: `You are a restaurant finder AI. Find restaurants based on the cuisine, city, and optionally sub-cuisine specified by the user.
-    You should try to provide diverse and realistic-sounding restaurant names, addresses, and phone numbers within the specified city.
-    For the 'imageUrl', you MUST use 'https://placehold.co/600x400.png' for every restaurant. Do not attempt to find or generate any other image URLs.
-    Conceptually, this image should depict the restaurant's ambiance, ideally like a photo taken by a customer or from the restaurant's website, featuring a night-time dining setting, good atmosphere, and people if appropriate.
-    Return a JSON array of restaurants.
+  prompt: `Eres una IA buscadora de restaurantes. Encuentra restaurantes basados en la cocina, ciudad y, opcionalmente, la sub-cocina especificada por el usuario.
+    Debes intentar proporcionar nombres de restaurantes, direcciones y números de teléfono diversos y que suenen realistas dentro de la ciudad especificada.
+    Para 'imageUrl', DEBES usar 'https://placehold.co/600x400.png' para cada restaurante. No intentes encontrar o generar otras URLs de imágenes.
+    Conceptualmente, esta imagen debe representar el ambiente del restaurante, idealmente como una foto tomada por un cliente o del sitio web del restaurante, presentando un ambiente de cena nocturno, buena atmósfera y gente si es apropiado.
+    Devuelve un arreglo JSON de restaurantes.
 
-    Cuisine: {{{cuisine}}}
+    Cocina: {{{cuisine}}}
     {{#if subCuisine}}
-    Sub-Cuisine: {{{subCuisine}}}
+    Sub-Cocina: {{{subCuisine}}}
     {{else}}
-    Sub-Cuisine: Any (Search for all types of {{{cuisine}}} restaurants)
+    Sub-Cocina: Cualquiera (Buscar todos los tipos de restaurantes de {{{cuisine}}})
     {{/if}}
-    City: {{{city}}}
+    Ciudad: {{{city}}}
 
-    Each restaurant object in the array should include:
-    - name: The name of the restaurant.
-    - imageUrl: This MUST be the exact string 'https://placehold.co/600x400.png'.
-    - address: The address of the restaurant in the specified city.
-    - phoneNumber: The phone number of the restaurant. (e.g., (555) 123-4567)
-    - description: A short description of the restaurant.
+    Cada objeto de restaurante en el arreglo debe incluir:
+    - name: El nombre del restaurante.
+    - imageUrl: ESTO DEBE ser la cadena exacta 'https://placehold.co/600x400.png'.
+    - address: La dirección del restaurante en la ciudad especificada.
+    - phoneNumber: El número de teléfono del restaurante. (ej., (555) 123-4567)
+    - description: Una breve descripción del restaurante.
   `,
 });
 

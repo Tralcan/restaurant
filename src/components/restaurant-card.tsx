@@ -19,7 +19,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
       <div className="relative w-full h-48 md:h-56">
         <Image
           src={restaurant.imageUrl || 'https://placehold.co/600x400.png'}
-          alt={`Ambiance of ${restaurant.name}`}
+          alt={`Ambiente de ${restaurant.name}`}
           layout="fill"
           objectFit="cover"
           className="transition-transform duration-300 ease-in-out group-hover:scale-105"

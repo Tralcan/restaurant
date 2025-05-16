@@ -21,7 +21,7 @@ import { AlertCircle, UtensilsCrossed, Search, MapPin, Building, ListFilter } fr
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 
-const ALL_SUBCUISINES_OPTION = "All";
+const ALL_SUBCUISINES_OPTION = "Todas";
 
 export default function GlobalGrubFinderPage() {
   const [selectedCuisine, setSelectedCuisine] = useState<string>('');
@@ -49,21 +49,21 @@ export default function GlobalGrubFinderPage() {
             setSubCuisines([ALL_SUBCUISINES_OPTION, ...result.subCuisines]);
             if (result.subCuisines.length === 0) {
               toast({
-                title: "No Specific Sub-Cuisines Found",
-                description: `No specific sub-cuisines for ${selectedCuisine}. You can search for "All".`,
+                title: "No se Encontraron Sub-Cocinas Específicas",
+                description: `No hay sub-cocinas específicas para ${selectedCuisine}. Puedes buscar en "${ALL_SUBCUISINES_OPTION}".`,
                 variant: "default",
               });
             }
           } else {
-            throw new Error("Invalid response format for sub-cuisines.");
+            throw new Error("Formato de respuesta inválido para sub-cocinas.");
           }
         } catch (err) {
-          console.error('Error fetching sub-cuisines:', err);
-          const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-          setError(`Failed to fetch sub-cuisines: ${errorMessage}`);
+          console.error('Error al obtener sub-cocinas:', err);
+          const errorMessage = err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+          setError(`Error al obtener sub-cocinas: ${errorMessage}`);
           toast({
             title: 'Error',
-            description: `Could not fetch sub-cuisines for ${selectedCuisine}.`,
+            description: `No se pudieron obtener las sub-cocinas para ${selectedCuisine}.`,
             variant: 'destructive',
           });
         }
@@ -93,8 +93,8 @@ export default function GlobalGrubFinderPage() {
   const handleFindRestaurants = () => {
     if (!selectedCuisine || !selectedSubCuisine || !city) {
       toast({
-        title: 'Selection Incomplete',
-        description: 'Please select a cuisine, a sub-cuisine (or "All"), and enter a city.',
+        title: 'Selección Incompleta',
+        description: 'Por favor, selecciona un tipo de cocina, una sub-cocina (o "Todas"), y ingresa una ciudad.',
         variant: 'default',
       });
       return;
@@ -113,21 +113,21 @@ export default function GlobalGrubFinderPage() {
           setRestaurants(result);
           if (result.length === 0) {
             toast({
-              title: "No Restaurants Found",
-              description: `Could not find restaurants for ${selectedCuisine}${subCuisineToSearch ? ` - ${subCuisineToSearch}` : ''} in ${city}. Try other options.`,
+              title: "No se Encontraron Restaurantes",
+              description: `No se pudieron encontrar restaurantes para ${selectedCuisine}${subCuisineToSearch ? ` - ${subCuisineToSearch}` : ''} en ${city}. Intenta con otras opciones.`,
               variant: "default",
             });
           }
         } else {
-          throw new Error("Invalid response format for restaurants.");
+          throw new Error("Formato de respuesta inválido para restaurantes.");
         }
       } catch (err) {
-        console.error('Error fetching restaurants:', err);
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-        setError(`Failed to fetch restaurants: ${errorMessage}`);
+        console.error('Error al obtener restaurantes:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+        setError(`Error al obtener restaurantes: ${errorMessage}`);
         toast({
           title: 'Error',
-          description: 'Could not fetch restaurants. Please try again.',
+          description: 'No se pudieron obtener los restaurantes. Por favor, inténtalo de nuevo.',
           variant: 'destructive',
         });
       }
@@ -139,10 +139,10 @@ export default function GlobalGrubFinderPage() {
       <header className="mb-12 text-center">
         <UtensilsCrossed className="mx-auto h-16 w-16 text-primary mb-4" />
         <h1 className="text-4xl md:text-5xl font-bold text-primary-foreground tracking-tight">
-          Global Grub Finder
+          Buscador Global de Antojos
         </h1>
         <p className="mt-3 text-lg text-muted-foreground">
-          Discover your next favorite dining spot with the perfect night-time vibe.
+          Descubre tu próximo lugar favorito para cenar con el ambiente nocturno perfecto.
         </p>
       </header>
 
@@ -150,11 +150,11 @@ export default function GlobalGrubFinderPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <label htmlFor="cuisine-select" className="block text-sm font-medium text-primary-foreground mb-2">
-              Cuisine Type
+              Tipo de Cocina
             </label>
             <Select value={selectedCuisine} onValueChange={setSelectedCuisine}>
               <SelectTrigger id="cuisine-select" className="w-full bg-input text-foreground border-border focus:ring-accent">
-                <SelectValue placeholder="Select a cuisine..." />
+                <SelectValue placeholder="Selecciona un tipo de cocina..." />
               </SelectTrigger>
               <SelectContent className="bg-popover text-popover-foreground">
                 {CUISINE_TYPES.map((cuisine) => (
@@ -168,7 +168,7 @@ export default function GlobalGrubFinderPage() {
 
           <div>
             <label htmlFor="subcuisine-select" className="block text-sm font-medium text-primary-foreground mb-2">
-              Sub-Cuisine / Specific
+              Sub-Cocina / Especificidad
             </label>
             <Select
               value={selectedSubCuisine}
@@ -178,7 +178,7 @@ export default function GlobalGrubFinderPage() {
               <SelectTrigger id="subcuisine-select" className="w-full bg-input text-foreground border-border focus:ring-accent">
                  <div className="flex items-center">
                   <ListFilter className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder={isSubCuisinesLoading ? "Loading..." : "Select specificity..."} />
+                  <SelectValue placeholder={isSubCuisinesLoading ? "Cargando..." : "Selecciona especificidad..."} />
                 </div>
               </SelectTrigger>
               <SelectContent className="bg-popover text-popover-foreground">
@@ -194,7 +194,7 @@ export default function GlobalGrubFinderPage() {
                   ))
                 )}
                 {!isSubCuisinesLoading && subCuisines.length === 1 && selectedCuisine && ( 
-                   <p className="p-4 text-sm text-muted-foreground">No specific sub-cuisines found. Searching "All {selectedCuisine}".</p>
+                   <p className="p-4 text-sm text-muted-foreground">No se encontraron sub-cocinas específicas. Buscando "Todas las de {selectedCuisine}".</p>
                 )}
               </SelectContent>
             </Select>
@@ -202,14 +202,14 @@ export default function GlobalGrubFinderPage() {
         </div>
          <div className="mb-6">
           <label htmlFor="city-input" className="block text-sm font-medium text-primary-foreground mb-2">
-            City
+            Ciudad
           </label>
           <div className="relative">
             <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               id="city-input"
               type="text"
-              placeholder="Enter your city..."
+              placeholder="Ingresa tu ciudad..."
               value={city}
               onChange={(e) => setCity(e.target.value)}
               className="w-full bg-input text-foreground border-border focus:ring-accent pl-10"
@@ -226,7 +226,7 @@ export default function GlobalGrubFinderPage() {
             ) : (
               <Search className="mr-2 h-5 w-5" />
             )}
-            Find Restaurants
+            Buscar Restaurantes
           </Button>
       </div>
 
@@ -256,7 +256,7 @@ export default function GlobalGrubFinderPage() {
       {!isRestaurantsLoading && restaurants.length > 0 && (
         <div className="w-full max-w-6xl">
           <h2 className="text-3xl font-semibold text-primary-foreground mb-8 text-center">
-            Restaurant Results for {city}
+            Resultados de Restaurantes para {city}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
             {restaurants.map((resto, index) => (
@@ -270,9 +270,9 @@ export default function GlobalGrubFinderPage() {
         <div className="text-center py-10 w-full max-w-3xl">
           <MapPin className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
-            No restaurants found matching your criteria in {city}.
+            No se encontraron restaurantes que coincidan con tus criterios en {city}.
           </p>
-          <p className="text-muted-foreground">Try different cuisine, sub-cuisine, or city options.</p>
+          <p className="text-muted-foreground">Intenta con diferentes opciones de cocina, sub-cocina o ciudad.</p>
         </div>
       )}
 
@@ -280,7 +280,7 @@ export default function GlobalGrubFinderPage() {
          <div className="text-center py-10 w-full max-w-3xl mt-8">
           <Building className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
-            Please select a cuisine and enter a city to begin your search.
+            Por favor, selecciona un tipo de cocina e ingresa una ciudad para comenzar tu búsqueda.
           </p>
         </div>
       )}
@@ -288,7 +288,7 @@ export default function GlobalGrubFinderPage() {
          <div className="text-center py-10 w-full max-w-3xl mt-8">
           <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
-            Start by selecting a cuisine type and entering a city to discover restaurants.
+            Comienza seleccionando un tipo de cocina e ingresando una ciudad para descubrir restaurantes.
           </p>
         </div>
       )}

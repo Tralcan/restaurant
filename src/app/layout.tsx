@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Global Grub Finder',
-  description: 'Find restaurants with the perfect night-time ambiance.',
+  title: 'Buscador Global de Antojos',
+  description: 'Encuentra restaurantes con el ambiente nocturno perfecto.',
 };
 
 export default function RootLayout({
@@ -19,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="es" className="dark">
       {/* Force dark theme by applying 'dark' class to <html> */}
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
