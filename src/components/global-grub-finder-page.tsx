@@ -1,7 +1,9 @@
+
 "use client";
 
 import { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -15,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CUISINE_TYPES } from '@/lib/constants';
 import { getSubCuisines, type GetSubCuisinesOutput } from '@/ai/flows/get-sub-cuisines';
 import { findRestaurantsWithAmbiance, type FindRestaurantsWithAmbianceOutput } from '@/ai/flows/find-restaurants-with-ambiance';
-import { AlertCircle, UtensilsCrossed, Search, MapPin } from 'lucide-react';
+import { AlertCircle, UtensilsCrossed, Search, MapPin, Building } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -24,6 +26,7 @@ export default function GlobalGrubFinderPage() {
   const [selectedCuisine, setSelectedCuisine] = useState<string>('');
   const [subCuisines, setSubCuisines] = useState<string[]>([]);
   const [selectedSubCuisine, setSelectedSubCuisine] = useState<string>('');
+  const [city, setCity] = useState<string>('');
   const [restaurants, setRestaurants] = useState<FindRestaurantsWithAmbianceOutput>([]);
   
   const [isSubCuisinesLoading, startSubCuisinesTransition] = useTransition();
@@ -68,10 +71,10 @@ export default function GlobalGrubFinderPage() {
   }, [selectedCuisine, toast]);
 
   const handleFindRestaurants = () => {
-    if (!selectedCuisine || !selectedSubCuisine) {
+    if (!selectedCuisine || !selectedSubCuisine || !city) {
       toast({
         title: 'Selection Incomplete',
-        description: 'Please select both a cuisine and a sub-cuisine.',
+        description: 'Please select a cuisine, a sub-cuisine, and enter a city.',
         variant: 'default',
       });
       return;
@@ -83,13 +86,14 @@ export default function GlobalGrubFinderPage() {
         const result = await findRestaurantsWithAmbiance({
           cuisine: selectedCuisine,
           subCuisine: selectedSubCuisine,
+          city: city,
         });
         if (result) {
           setRestaurants(result);
           if (result.length === 0) {
             toast({
               title: "No Restaurants Found",
-              description: `Could not find restaurants for ${selectedCuisine} - ${selectedSubCuisine}. Try other options.`,
+              description: `Could not find restaurants for ${selectedCuisine} - ${selectedSubCuisine} in ${city}. Try other options.`,
               variant: "default",
             });
           }
@@ -172,9 +176,25 @@ export default function GlobalGrubFinderPage() {
             </Select>
           </div>
         </div>
+         <div className="mb-6">
+          <label htmlFor="city-input" className="block text-sm font-medium text-primary-foreground mb-2">
+            City
+          </label>
+          <div className="relative">
+            <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              id="city-input"
+              type="text"
+              placeholder="Enter your city..."
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full bg-input text-foreground border-border focus:ring-accent pl-10"
+            />
+          </div>
+        </div>
         <Button
             onClick={handleFindRestaurants}
-            disabled={!selectedSubCuisine || isRestaurantsLoading || isSubCuisinesLoading}
+            disabled={!selectedSubCuisine || !city || isRestaurantsLoading || isSubCuisinesLoading}
             className="w-full text-lg py-3 bg-primary hover:bg-primary/90 text-primary-foreground focus:ring-accent"
           >
             {isRestaurantsLoading ? (
@@ -212,7 +232,7 @@ export default function GlobalGrubFinderPage() {
       {!isRestaurantsLoading && restaurants.length > 0 && (
         <div className="w-full max-w-6xl">
           <h2 className="text-3xl font-semibold text-primary-foreground mb-8 text-center">
-            Restaurant Results
+            Restaurant Results for {city}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
             {restaurants.map((resto, index) => (
@@ -222,13 +242,13 @@ export default function GlobalGrubFinderPage() {
         </div>
       )}
       
-      {!isRestaurantsLoading && restaurants.length === 0 && selectedSubCuisine && !error && (
+      {!isRestaurantsLoading && restaurants.length === 0 && selectedSubCuisine && city && !error && (
         <div className="text-center py-10 w-full max-w-3xl">
           <MapPin className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
-            No restaurants found matching your criteria.
+            No restaurants found matching your criteria in {city}.
           </p>
-          <p className="text-muted-foreground">Try different cuisine or sub-cuisine options.</p>
+          <p className="text-muted-foreground">Try different cuisine, sub-cuisine, or city options.</p>
         </div>
       )}
 
@@ -236,11 +256,21 @@ export default function GlobalGrubFinderPage() {
          <div className="text-center py-10 w-full max-w-3xl mt-8">
           <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
-            Start by selecting a cuisine type to discover restaurants.
+            Start by selecting a cuisine type and entering a city to discover restaurants.
+          </p>
+        </div>
+      )}
+       {!city && !selectedCuisine && !error && !isRestaurantsLoading && (
+         <div className="text-center py-10 w-full max-w-3xl mt-8">
+          <Building className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+          <p className="text-xl text-muted-foreground">
+            Please enter a city to begin your search.
           </p>
         </div>
       )}
 
+
     </div>
   );
 }
+
