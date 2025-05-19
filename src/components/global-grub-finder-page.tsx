@@ -16,12 +16,19 @@ import { Loader } from '@/components/ui/loader';
 import { useToast } from '@/hooks/use-toast';
 import { CUISINE_TYPES } from '@/lib/constants';
 import { getSubCuisines, type GetSubCuisinesOutput } from '@/ai/flows/get-sub-cuisines';
-import { findRestaurantsWithAmbiance, type FindRestaurantsWithAmbianceOutput } from '@/ai/flows/find-restaurants-with-ambiance';
-import { AlertCircle, UtensilsCrossed, Search, MapPin, Building, ListFilter, Star } from 'lucide-react';
+import { findRestaurantsWithAmbiance, type FindRestaurantsWithAmbianceOutput, type FindRestaurantsWithAmbianceInput } from '@/ai/flows/find-restaurants-with-ambiance';
+import { generateRestaurantImage, type GenerateRestaurantImageInput, type GenerateRestaurantImageOutput } from '@/ai/flows/generate-restaurant-image';
+import { AlertCircle, UtensilsCrossed, Search, MapPin, Building, ListFilter, Star, Image as ImageIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 
 const ALL_SUBCUISINES_OPTION = "Todas";
+
+interface RestaurantImageData {
+  loading: boolean;
+  dataUri?: string;
+  error?: string;
+}
 
 export default function GlobalGrubFinderPage() {
   const [selectedCuisine, setSelectedCuisine] = useState<string>('');
@@ -29,6 +36,7 @@ export default function GlobalGrubFinderPage() {
   const [selectedSubCuisine, setSelectedSubCuisine] = useState<string>(ALL_SUBCUISINES_OPTION);
   const [city, setCity] = useState<string>('');
   const [restaurants, setRestaurants] = useState<FindRestaurantsWithAmbianceOutput>([]);
+  const [restaurantImageData, setRestaurantImageData] = useState<Record<string, RestaurantImageData>>({});
   
   const [isSubCuisinesLoading, startSubCuisinesTransition] = useTransition();
   const [isRestaurantsLoading, startRestaurantsTransition] = useTransition();
@@ -40,6 +48,7 @@ export default function GlobalGrubFinderPage() {
     if (selectedCuisine) {
       setError(null);
       setRestaurants([]); 
+      setRestaurantImageData({});
       setSubCuisines([ALL_SUBCUISINES_OPTION]); 
       setSelectedSubCuisine(ALL_SUBCUISINES_OPTION); 
       startSubCuisinesTransition(async () => {
@@ -72,6 +81,7 @@ export default function GlobalGrubFinderPage() {
       setSubCuisines([ALL_SUBCUISINES_OPTION]);
       setSelectedSubCuisine(ALL_SUBCUISINES_OPTION);
       setRestaurants([]); 
+      setRestaurantImageData({});
       setError(null);
     }
   }, [selectedCuisine, toast]);
@@ -79,12 +89,14 @@ export default function GlobalGrubFinderPage() {
   useEffect(() => {
     if (selectedCuisine) { 
         setRestaurants([]);
+        setRestaurantImageData({});
         setError(null);
     }
-  }, [selectedSubCuisine, selectedCuisine]); // Added selectedCuisine dependency to ensure resets happen logically
+  }, [selectedSubCuisine, selectedCuisine]);
 
   useEffect(() => {
     setRestaurants([]);
+    setRestaurantImageData({});
     setError(null);
   }, [city]);
 
@@ -99,14 +111,16 @@ export default function GlobalGrubFinderPage() {
     }
     setError(null);
     setRestaurants([]);
+    setRestaurantImageData({});
     startRestaurantsTransition(async () => {
       try {
         const subCuisineToSearch = selectedSubCuisine === ALL_SUBCUISINES_OPTION ? '' : selectedSubCuisine;
-        const result = await findRestaurantsWithAmbiance({
+        const searchInput: FindRestaurantsWithAmbianceInput = {
           cuisine: selectedCuisine,
           subCuisine: subCuisineToSearch,
           city: city,
-        });
+        };
+        const result = await findRestaurantsWithAmbiance(searchInput);
         if (result) {
           setRestaurants(result);
           if (result.length === 0) {
@@ -114,6 +128,35 @@ export default function GlobalGrubFinderPage() {
               title: "No se Encontraron Restaurantes",
               description: `No se pudieron encontrar restaurantes para ${selectedCuisine}${subCuisineToSearch ? ` - ${subCuisineToSearch}` : ''} en ${city}. Intenta con otras opciones.`,
               variant: "default",
+            });
+          } else {
+            // Disparar la generación de imágenes después de obtener los restaurantes
+            result.forEach(resto => {
+              // Usar el nombre como clave simple, idealmente sería un ID único
+              const imageKey = resto.name; 
+              setRestaurantImageData(prev => ({ ...prev, [imageKey]: { loading: true } }));
+              
+              const imageGenInput: GenerateRestaurantImageInput = {
+                restaurantName: resto.name,
+                cuisine: selectedCuisine, // Podría ser más específico si la IA devolviera la cocina exacta del restaurante
+                city: city
+              };
+
+              generateRestaurantImage(imageGenInput)
+                .then(imageResult => {
+                  setRestaurantImageData(prev => ({
+                    ...prev,
+                    [imageKey]: { loading: false, dataUri: imageResult.imageDataUri }
+                  }));
+                })
+                .catch(imgErr => {
+                  console.error(`Error al generar imagen para ${resto.name}:`, imgErr);
+                  setRestaurantImageData(prev => ({
+                    ...prev,
+                    [imageKey]: { loading: false, error: 'Error al generar imagen' }
+                  }));
+                  // Opcional: toast para error de imagen individual
+                });
             });
           }
         } else {
@@ -240,7 +283,9 @@ export default function GlobalGrubFinderPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
           {[...Array(3)].map((_, i) => (
              <Card key={i} className="overflow-hidden shadow-lg flex flex-col h-full">
-                <div className="relative w-full h-48 md:h-56 bg-muted animate-pulse"></div>
+                <div className="relative w-full h-48 md:h-56 bg-muted animate-pulse flex items-center justify-center">
+                    <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
+                </div>
                 <CardContent className="p-4 flex-grow">
                   <div className="h-6 bg-muted animate-pulse rounded w-3/4 mb-2"></div> {/* Name placeholder */}
                   <div className="flex items-center mb-2"> {/* Rating placeholder */}
@@ -263,9 +308,19 @@ export default function GlobalGrubFinderPage() {
             Resultados de Restaurantes para {city}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
-            {restaurants.map((resto, index) => (
-              <RestaurantCard key={`${resto.name}-${index}-${city}`} restaurant={resto} />
-            ))}
+            {restaurants.map((resto, index) => {
+              const imageKey = resto.name; // Simple key, idealmente un ID único
+              const imageData = restaurantImageData[imageKey];
+              return (
+                <RestaurantCard 
+                  key={`${resto.name}-${index}-${city}`} 
+                  restaurant={resto} 
+                  imageDataUri={imageData?.dataUri}
+                  isImageLoading={imageData?.loading}
+                  imageError={imageData?.error}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -280,7 +335,7 @@ export default function GlobalGrubFinderPage() {
         </div>
       )}
 
-      { !city && !isRestaurantsLoading && !error && !selectedCuisine && ( // Adjusted condition for initial state or city cleared
+      { !city && !isRestaurantsLoading && !error && !selectedCuisine && ( 
          <div className="text-center py-10 w-full max-w-3xl mt-8">
           <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
@@ -289,7 +344,7 @@ export default function GlobalGrubFinderPage() {
         </div>
       )}
 
-       { city && !selectedCuisine && !isRestaurantsLoading && !error && ( // If city is entered but no cuisine selected
+       { city && !selectedCuisine && !isRestaurantsLoading && !error && ( 
          <div className="text-center py-10 w-full max-w-3xl mt-8">
           <UtensilsCrossed className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
@@ -297,8 +352,6 @@ export default function GlobalGrubFinderPage() {
           </p>
         </div>
       )}
-
-
     </div>
   );
 }

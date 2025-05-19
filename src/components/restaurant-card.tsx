@@ -5,39 +5,74 @@ import Image from 'next/image';
 import type { FindRestaurantsWithAmbianceOutput } from '@/ai/flows/find-restaurants-with-ambiance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { MapPin, Phone, Star } from 'lucide-react';
+import { MapPin, Phone, Star, ImageIcon, AlertTriangle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 type Restaurant = FindRestaurantsWithAmbianceOutput[0];
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
+  imageDataUri?: string;
+  isImageLoading?: boolean;
+  imageError?: string;
 }
 
-export function RestaurantCard({ restaurant }: RestaurantCardProps) {
+export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, imageError }: RestaurantCardProps) {
   const displayRating = restaurant.rating ? Math.round(restaurant.rating * 2) / 2 : null; // Rounds to nearest 0.5
 
-  const ImageAndTitleContent = () => (
-    <div className="relative w-full h-48 md:h-56">
+  const renderImage = () => {
+    if (isImageLoading) {
+      return (
+        <div className="relative w-full h-48 md:h-56 bg-muted flex items-center justify-center animate-pulse">
+          <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
+        </div>
+      );
+    }
+    if (imageError) {
+      return (
+        <div className="relative w-full h-48 md:h-56 bg-destructive/10 flex flex-col items-center justify-center text-center p-2">
+          <AlertTriangle className="h-8 w-8 text-destructive mb-2" />
+          <p className="text-xs text-destructive-foreground">Error al cargar imagen</p>
+        </div>
+      );
+    }
+    
+    const src = imageDataUri || restaurant.imageUrl || 'https://placehold.co/600x400.png';
+    // El data-ai-hint es más útil para el placeholder original. Si tenemos una imagen generada, es menos relevante.
+    // Podríamos hacerlo más específico si usáramos el placeholder, ej: `data-ai-hint={restaurant.cuisine}`
+    const aiHint = imageDataUri ? undefined : restaurant.cuisine?.split(' ')[0].toLowerCase() || "food";
+
+
+    return (
       <Image
-        src={restaurant.imageUrl || 'https://placehold.co/600x400.png'}
-        alt={`Ambiente de ${restaurant.name}`}
+        src={src}
+        alt={`Imagen de ${restaurant.name}`}
         layout="fill"
         objectFit="cover"
         className={cn(
           "transition-transform duration-300 ease-in-out",
-          restaurant.websiteUrl && "group-hover:scale-105" // Apply scale only if it's a link
+          restaurant.websiteUrl && "group-hover:scale-105"
         )}
-        data-ai-hint="restaurant night"
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          target.srcset = 'https://placehold.co/600x400.png';
-          target.src = 'https://placehold.co/600x400.png';
+        data-ai-hint={aiHint} // Pista para Unsplash si se usa el placeholder
+        onError={(e) => { // Fallback si la imagen (incluida la generada si fuera una URL) falla
+          if (!imageDataUri) { // Solo cambia a placeholder si no es una data URI fallida
+            const target = e.target as HTMLImageElement;
+            target.srcset = 'https://placehold.co/600x400.png'; // Sin texto
+            target.src = 'https://placehold.co/600x400.png';
+          }
         }}
       />
+    );
+  };
+
+
+  const ImageAndTitleContent = () => (
+    <div className="relative w-full h-48 md:h-56">
+      {renderImage()}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
       <CardTitle className={cn(
         "absolute bottom-4 left-4 text-primary-foreground text-xl lg:text-2xl font-bold drop-shadow-md",
-        restaurant.websiteUrl && "group-hover:underline" // Underline on hover if it's a link
+        restaurant.websiteUrl && "group-hover:underline"
       )}>
         {restaurant.name}
       </CardTitle>
@@ -52,7 +87,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Visitar el sitio web de ${restaurant.name}`}
-          className="block group cursor-pointer" // group for hover effects
+          className="block group cursor-pointer"
         >
           <ImageAndTitleContent />
         </a>
