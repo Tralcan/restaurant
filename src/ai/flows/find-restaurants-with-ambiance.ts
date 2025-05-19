@@ -3,7 +3,7 @@
 'use server';
 /**
  * @fileOverview Este archivo define un flujo de Genkit para encontrar restaurantes que coincidan con una cocina, sub-cocina (opcional) y ciudad especificadas,
- * priorizando resultados con imágenes que representen un ambiente de cena nocturno. También incluye calificaciones y número de reseñas.
+ * priorizando resultados con imágenes que representen un ambiente de cena nocturno. También incluye calificaciones, número de reseñas y URL del sitio web.
  *
  * - findRestaurantsWithAmbiance -  Una función para iniciar el flujo de búsqueda de restaurantes.
  * - FindRestaurantsWithAmbianceInput - El tipo de entrada para la función findRestaurantsWithAmbiance.
@@ -25,6 +25,7 @@ const RestaurantSchema = z.object({
   imageUrl: z.string().describe("URL de una imagen. DEBE ser 'https://placehold.co/600x400.png'. Esta imagen debe representar conceptualmente una foto de un cliente o una imagen del sitio web del restaurante, centrándose en un ambiente de cena nocturno con personas si es posible."),
   address: z.string().describe('La dirección del restaurante.'),
   phoneNumber: z.string().optional().describe('El número de teléfono del restaurante.'),
+  websiteUrl: z.string().url().optional().describe('La URL del sitio web del restaurante (ej., https://www.ejemplorestaurante.com). Opcional, puede estar vacío si no se encuentra.'),
   description: z.string().optional().describe('Una breve descripción del restaurante.'),
   rating: z.number().min(1).max(5).optional().describe('La calificación del restaurante, de 1 a 5 estrellas (puede ser decimal, ej. 4.5). Simula datos de sitios como Google o TripAdvisor.'),
   reviewCount: z.number().int().min(0).optional().describe('El número total de reseñas que tiene el restaurante.'),
@@ -42,7 +43,7 @@ const findRestaurantsPrompt = ai.definePrompt({
   input: {schema: FindRestaurantsWithAmbianceInputSchema},
   output: {schema: FindRestaurantsWithAmbianceOutputSchema},
   prompt: `Eres una IA buscadora de restaurantes. Encuentra restaurantes basados en la cocina, ciudad y, opcionalmente, la sub-cocina especificada por el usuario.
-    Debes intentar proporcionar nombres de restaurantes, direcciones, números de teléfono, calificaciones y número de reseñas diversos y que suenen realistas dentro de la ciudad especificada.
+    Debes intentar proporcionar nombres de restaurantes, direcciones, números de teléfono, URLs de sitios web, calificaciones y número de reseñas diversos y que suenen realistas dentro de la ciudad especificada.
     Para 'imageUrl', DEBES usar 'https://placehold.co/600x400.png' para cada restaurante. No intentes encontrar o generar otras URLs de imágenes.
     Conceptualmente, esta imagen debe representar el ambiente del restaurante, idealmente como una foto tomada por un cliente o del sitio web del restaurante, presentando un ambiente de cena nocturno, buena atmósfera y gente si es apropiado.
     Devuelve un arreglo JSON de restaurantes.
@@ -60,6 +61,7 @@ const findRestaurantsPrompt = ai.definePrompt({
     - imageUrl: ESTO DEBE ser la cadena exacta 'https://placehold.co/600x400.png'.
     - address: La dirección del restaurante en la ciudad especificada.
     - phoneNumber: El número de teléfono del restaurante. (ej., (555) 123-4567)
+    - websiteUrl: La URL del sitio web del restaurante (ej., https://www.elbuensabor.com). Si no se encuentra un sitio web, este campo puede omitirse o dejarse vacío.
     - description: Una breve descripción del restaurante.
     - rating: Un número entre 1 y 5 (puede ser decimal, ej. 4, 3.5, 4.8) que represente la calificación promedio del restaurante.
     - reviewCount: Un número entero no negativo que represente la cantidad de reseñas recibidas por el restaurante.
@@ -77,4 +79,3 @@ const findRestaurantsWithAmbianceFlow = ai.defineFlow(
     return output!;
   }
 );
-
