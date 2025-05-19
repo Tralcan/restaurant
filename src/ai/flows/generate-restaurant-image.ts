@@ -27,17 +27,7 @@ export async function generateRestaurantImage(input: GenerateRestaurantImageInpu
   return generateRestaurantImageFlow(input);
 }
 
-const generateImagePrompt = ai.definePrompt({
-  name: 'generateRestaurantImagePrompt',
-  input: {schema: GenerateRestaurantImageInputSchema},
-  // Aunque el output deseado es una imagen, el modelo necesita un esquema de texto para la respuesta que contiene la imagen.
-  // La imagen se extraerá del campo `media` de la respuesta de `ai.generate`.
-  output: { schema: z.object({generatedText: z.string().optional()}) }, 
-  prompt: `Genera una imagen atractiva y de alta calidad para un restaurante llamado '{{restaurantName}}' en la ciudad de '{{city}}' que se especializa en cocina '{{cuisine}}'.
-La imagen debe representar un ambiente de cena nocturno, posiblemente con comida apetitosa o el interior del restaurante.
-Evita incluir texto visible en la imagen. El estilo debe ser fotorealista si es posible, o una ilustración detallada.
-Responde solo con la imagen, sin texto adicional si es posible.`,
-});
+// Eliminamos la definición de generateImagePrompt ya que construiremos el prompt directamente.
 
 const generateRestaurantImageFlow = ai.defineFlow(
   {
@@ -46,9 +36,15 @@ const generateRestaurantImageFlow = ai.defineFlow(
     outputSchema: GenerateRestaurantImageOutputSchema,
   },
   async (input) => {
+    // Construimos el prompt string directamente
+    const promptString = `Genera una imagen atractiva y de alta calidad para un restaurante llamado '${input.restaurantName}' en la ciudad de '${input.city}' que se especializa en cocina '${input.cuisine}'.
+La imagen debe representar un ambiente de cena nocturno, posiblemente con comida apetitosa o el interior del restaurante.
+Evita incluir texto visible en la imagen. El estilo debe ser fotorealista si es posible, o una ilustración detallada.
+Responde solo con la imagen, sin texto adicional si es posible.`;
+
     const {media} = await ai.generate({
       model: 'googleai/gemini-2.0-flash-exp', // Modelo capaz de generar imágenes
-      prompt: generateImagePrompt.render(input)!.prompt as string, // Usamos el prompt renderizado
+      prompt: promptString, // Usamos el string del prompt construido directamente
       config: {
         responseModalities: ['TEXT', 'IMAGE'], // Debe incluir IMAGE
         // Opcional: ajustar safetySettings si es necesario, aunque para restaurantes no suele ser problemático
@@ -66,3 +62,4 @@ const generateRestaurantImageFlow = ai.defineFlow(
     return {imageDataUri: media.url};
   }
 );
+
