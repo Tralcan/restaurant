@@ -11,6 +11,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import {generateRestaurantImage} from './generate-restaurant-image';
 import {z} from 'genkit';
 
 const FindRestaurantsWithAmbianceInputSchema = z.object({
@@ -76,7 +77,20 @@ const findRestaurantsWithAmbianceFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await findRestaurantsPrompt(input);
-    return output!;
+
+    // Process each restaurant to generate an image
+    const restaurantsWithImages = await Promise.all(
+      output!.map(async restaurant => {
+        const imageResult = await generateRestaurantImage({
+          restaurantName: restaurant.name,
+          cuisine: input.cuisine, // Use the main cuisine from the input
+          city: input.city, // Use the city from the input
+        });
+        return {...restaurant, imageUrl: imageResult.imageDataUri};
+      })
+    );
+
+    return restaurantsWithImages;
   }
 );
 
