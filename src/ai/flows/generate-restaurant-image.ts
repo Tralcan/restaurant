@@ -44,7 +44,10 @@ Responde solo con la imagen, sin texto adicional si es posible.`;
 
     const {media} = await ai.generate({
       model: 'googleai/gemini-2.0-flash-exp', // Modelo capaz de generar imágenes
-      prompt: promptString, // Usamos el string del prompt construido directamente
+ prompt: [{
+ text: promptString,
+ type: 'text', // Especificamos explícitamente el tipo
+ }], // Pasamos el prompt como un array que contiene un objeto con la clave 'text' y el tipo explícito
       config: {
         responseModalities: ['TEXT', 'IMAGE'], // Debe incluir IMAGE
         // Opcional: ajustar safetySettings si es necesario, aunque para restaurantes no suele ser problemático
