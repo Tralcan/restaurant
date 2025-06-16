@@ -29,10 +29,10 @@ const RestaurantSchema = z.object({
   description: z.string().optional().describe('Una breve descripción del restaurante.'),
   rating: z.number().min(1).max(5).optional().describe('La calificación del restaurante, de 1 a 5 estrellas (puede ser decimal, ej. 4.5). Simula datos de sitios como Google o TripAdvisor.'),
   reviewCount: z.number().int().min(0).optional().describe('El número total de reseñas que tiene el restaurante.'),
-  priceLevel: z.enum(['$', '$$', '$$$', '$$$$']).optional().describe("El nivel de precios del restaurante, donde '$' es económico, '$$' es moderado, '$$$' es caro y '$$$$' es muy caro. Omitir solo si es absolutamente imposible de determinar o inventar plausiblemente."),
+  priceLevel: z.enum(['$', '$$', '$$$', '$$$$']).optional().describe("El nivel de precios del restaurante, donde '$' es económico, '$$' es moderado, '$$$' es caro y '$$$$' es muy caro. Este campo ES MUY IMPORTANTE, intenta siempre asignar uno."),
 });
 
-const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).min(0).max(12).describe("Un arreglo de entre 0 y 12 restaurantes que coinciden con los criterios. Intenta devolver alrededor de 10-12 si se encuentran coincidencias. Para 'websiteUrl', solo incluye el campo si encuentras una URL de sitio web real y funcional; de lo contrario, omítelo. Para 'priceLevel', intenta siempre asignar uno; omítelo solo si es imposible.");
+const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).min(0).max(12).describe("Un arreglo de entre 0 y 12 restaurantes que coinciden con los criterios. Intenta devolver alrededor de 10-12 si se encuentran coincidencias. Para 'websiteUrl', solo incluye el campo si encuentras una URL de sitio web real y funcional; de lo contrario, omítelo. Para 'priceLevel', **DEBES** asignar uno a cada restaurante; no omitas este campo.");
 export type FindRestaurantsWithAmbianceOutput = z.infer<typeof FindRestaurantsWithAmbianceOutputSchema>;
 
 export async function findRestaurantsWithAmbiance(input: FindRestaurantsWithAmbianceInput): Promise<FindRestaurantsWithAmbianceOutput> {
@@ -42,7 +42,7 @@ export async function findRestaurantsWithAmbiance(input: FindRestaurantsWithAmbi
 const findRestaurantsPrompt = ai.definePrompt({
   name: 'findRestaurantsPrompt',
   input: {schema: FindRestaurantsWithAmbianceInputSchema},
-  output: {schema: FindRestaurantsWithAmbianceOutputSchema.describe("Devuelve un arreglo JSON de restaurantes que coinciden con los criterios. Intenta devolver entre 10 y 12 restaurantes si es posible. Para 'websiteUrl', solo incluye el campo si encuentras una URL de sitio web real y funcional. De lo contrario, omítelo o deja su valor nulo/vacío. Para 'priceLevel', DEBES intentar asignar uno; omite este campo solo si es absolutamente imposible determinarlo o inventar uno plausible.")},
+  output: {schema: FindRestaurantsWithAmbianceOutputSchema.describe("Devuelve un arreglo JSON de restaurantes que coinciden con los criterios. Intenta devolver entre 10 y 12 restaurantes si es posible. Para 'websiteUrl', solo incluye el campo si encuentras una URL de sitio web real y funcional. De lo contrario, omítelo o deja su valor nulo/vacío. Para 'priceLevel', **DEBES** asignar uno ('$', '$$', '$$$' o '$$$$') a CADA restaurante; no omitas este campo.")},
   prompt: `Eres una IA buscadora de restaurantes. Encuentra restaurantes basados en la cocina, ciudad y, opcionalmente, la sub-cocina especificada por el usuario.
     Debes intentar proporcionar nombres de restaurantes, direcciones, números de teléfono, URLs de sitios web, calificaciones, número de reseñas y niveles de precios diversos y que suenen realistas dentro de la ciudad especificada.
     Intenta devolver entre 10 y 12 restaurantes si es posible.
@@ -67,7 +67,7 @@ const findRestaurantsPrompt = ai.definePrompt({
     - description: Una breve descripción del restaurante.
     - rating: Un número entre 1 y 5 (puede ser decimal, ej. 4, 3.5, 4.8) que represente la calificación promedio del restaurante.
     - reviewCount: Un número entero no negativo que represente la cantidad de reseñas recibidas por el restaurante.
-    - priceLevel: Una representación textual del nivel de precios (por ejemplo, "$", "$$", "$$$", o "$$$$"). Donde "$" es barato/económico, "$$" es moderado, "$$$" es caro, y "$$$$" es muy caro/lujoso. **DEBES intentar asignar un nivel de precios. Si es absolutamente imposible determinarlo o inventar uno plausible, entonces puedes omitir este campo.**
+    - priceLevel: Una representación textual del nivel de precios (por ejemplo, "$", "$$", "$$$", o "$$$$"). Donde "$" es barato/económico, "$$" es moderado, "$$$" es caro, y "$$$$" es muy caro/lujoso. **DEBES asignar un nivel de precios a CADA restaurante. No omitas este campo.**
   `,
 });
 
