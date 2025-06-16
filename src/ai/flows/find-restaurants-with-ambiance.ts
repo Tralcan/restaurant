@@ -11,7 +11,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {generateRestaurantImage} from './generate-restaurant-image';
+// import {generateRestaurantImage} from './generate-restaurant-image'; // Ya no se usa aquí directamente
 import {z} from 'genkit';
 
 const FindRestaurantsWithAmbianceInputSchema = z.object({
@@ -23,7 +23,7 @@ export type FindRestaurantsWithAmbianceInput = z.infer<typeof FindRestaurantsWit
 
 const RestaurantSchema = z.object({
   name: z.string().describe('El nombre del restaurante.'),
-  imageUrl: z.string().describe("URL de una imagen. DEBE ser 'https://placehold.co/600x400.png' inicialmente. Esta será reemplazada por una imagen generada por IA."),
+  imageUrl: z.string().describe("URL de una imagen. DEBE ser 'https://placehold.co/600x400.png' inicialmente. Esta será reemplazada por una imagen generada por IA en el cliente si es necesario."),
   address: z.string().describe('La dirección del restaurante.'),
   phoneNumber: z.string().optional().describe('El número de teléfono del restaurante.'),
   websiteUrl: z.string().optional().describe('La URL válida y existente del sitio web del restaurante (ej., https://www.ejemplorestaurante.com). Si no se encuentra un sitio web real y funcional, este campo debe omitirse o dejarse nulo/vacío. Debe ser una URL válida si se proporciona.'),
@@ -82,26 +82,10 @@ const findRestaurantsWithAmbianceFlow = ai.defineFlow(
     if (!output) {
         return [];
     }
-
-    // Process each restaurant to generate an image
-    const restaurantsWithImages = await Promise.all(
-      output.map(async restaurant => {
-        try {
-            const imageResult = await generateRestaurantImage({
-            restaurantName: restaurant.name,
-            cuisine: input.cuisine, 
-            city: input.city, 
-            });
-            return {...restaurant, imageUrl: imageResult.imageDataUri};
-        } catch (error) {
-            console.error(`Error al generar imagen para ${restaurant.name}:`, error);
-            // Mantener la imagen placeholder si la generación falla
-            return {...restaurant, imageUrl: 'https://placehold.co/600x400.png'};
-        }
-      })
-    );
-
-    return restaurantsWithImages;
+    // Ya no generamos imágenes aquí. El cliente (global-grub-finder-page.tsx)
+    // se encargará de llamar a generateRestaurantImage para cada restaurante
+    // después de recibir esta lista inicial.
+    return output;
   }
 );
 
