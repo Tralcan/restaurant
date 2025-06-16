@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CUISINE_TYPES } from '@/lib/constants';
 import { getSubCuisines, type GetSubCuisinesOutput } from '@/ai/flows/get-sub-cuisines';
 import { findRestaurantsWithAmbiance, type FindRestaurantsWithAmbianceOutput, type FindRestaurantsWithAmbianceInput } from '@/ai/flows/find-restaurants-with-ambiance';
-import { generateRestaurantImage, type GenerateRestaurantImageInput, type GenerateRestaurantImageOutput } from '@/ai/flows/generate-restaurant-image';
+import { generateRestaurantImage, type GenerateRestaurantImageInput } from '@/ai/flows/generate-restaurant-image';
 import { AlertCircle, UtensilsCrossed, Search, MapPin, Building, ListFilter, Star, Image as ImageIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
@@ -130,15 +130,13 @@ export default function GlobalGrubFinderPage() {
               variant: "default",
             });
           } else {
-            // Disparar la generación de imágenes después de obtener los restaurantes
             result.forEach(resto => {
-              // Usar el nombre como clave simple, idealmente sería un ID único
               const imageKey = resto.name; 
               setRestaurantImageData(prev => ({ ...prev, [imageKey]: { loading: true } }));
               
               const imageGenInput: GenerateRestaurantImageInput = {
                 restaurantName: resto.name,
-                cuisine: selectedCuisine, // Podría ser más específico si la IA devolviera la cocina exacta del restaurante
+                cuisine: selectedCuisine,
                 city: city
               };
 
@@ -153,9 +151,8 @@ export default function GlobalGrubFinderPage() {
                   console.error(`Error al generar imagen para ${resto.name}:`, imgErr);
                   setRestaurantImageData(prev => ({
                     ...prev,
-                    [imageKey]: { loading: false, error: 'Error al generar imagen' }
+                    [imageKey]: { loading: false, error: 'Error al generar imagen', dataUri: 'https://placehold.co/600x400.png' }
                   }));
-                  // Opcional: toast para error de imagen individual
                 });
             });
           }
@@ -281,7 +278,7 @@ export default function GlobalGrubFinderPage() {
 
       {isRestaurantsLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
-          {[...Array(3)].map((_, i) => (
+          {[...Array(6)].map((_, i) => ( // Increased to 6 skeletons
              <Card key={i} className="overflow-hidden shadow-lg flex flex-col h-full">
                 <div className="relative w-full h-48 md:h-56 bg-muted animate-pulse flex items-center justify-center">
                     <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
@@ -309,11 +306,11 @@ export default function GlobalGrubFinderPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
             {restaurants.map((resto, index) => {
-              const imageKey = resto.name; // Simple key, idealmente un ID único
+              const imageKey = `${resto.name}-${resto.address}`; // More unique key
               const imageData = restaurantImageData[imageKey];
               return (
                 <RestaurantCard 
-                  key={`${resto.name}-${index}-${city}`} 
+                  key={imageKey} 
                   restaurant={resto} 
                   imageDataUri={imageData?.dataUri}
                   isImageLoading={imageData?.loading}
