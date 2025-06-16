@@ -99,9 +99,11 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
               {restaurant.description}
             </CardDescription>
           )}
-          {displayRating !== null && (
+          
+          {/* BLOQUE DE CALIFICACIÓN Y RESEÑAS */}
+          {(displayRating !== null || (restaurant.reviewCount !== undefined && restaurant.reviewCount !== null)) && (
             <div className="flex items-center mb-2">
-              {Array.from({ length: 5 }, (_, i) => (
+              {displayRating !== null && Array.from({ length: 5 }, (_, i) => (
                 <Star
                   key={i}
                   className={cn(
@@ -120,12 +122,16 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
               )}
             </div>
           )}
+          
+          {/* BLOQUE DE NIVEL DE PRECIOS */}
           {restaurant.priceLevel && (
             <div className="flex items-center text-sm text-muted-foreground mb-3">
-              <span className="font-semibold mr-2 text-accent">Precio:</span>
+              <DollarSign className="w-4 h-4 mr-2 text-accent shrink-0" />
+              <span className="font-semibold mr-1 text-accent">Precio:</span>
               <span className="font-bold text-foreground">{restaurant.priceLevel}</span>
             </div>
           )}
+
            <div className="flex items-center text-sm text-muted-foreground mb-2">
             <MapPin className="w-4 h-4 mr-2 text-accent shrink-0" />
             <span>{restaurant.address}</span>
