@@ -110,8 +110,8 @@ export default function GlobalGrubFinderPage() {
       return;
     }
     setError(null);
-    setRestaurants([]);
-    setRestaurantImageData({});
+    setRestaurants([]); // Limpiar restaurantes antes de la nueva búsqueda
+    setRestaurantImageData({}); // Limpiar datos de imágenes anteriores también
     startRestaurantsTransition(async () => {
       try {
         const subCuisineToSearch = selectedSubCuisine === ALL_SUBCUISINES_OPTION ? '' : selectedSubCuisine;
@@ -122,45 +122,12 @@ export default function GlobalGrubFinderPage() {
         };
         const result = await findRestaurantsWithAmbiance(searchInput);
         if (result) {
-          setRestaurants(result);
+          setRestaurants(result); // Esto disparará el useEffect de abajo para generar imágenes
           if (result.length === 0) {
             toast({
               title: "No se Encontraron Restaurantes",
               description: `No se pudieron encontrar restaurantes para ${selectedCuisine}${subCuisineToSearch ? ` - ${subCuisineToSearch}` : ''} en ${city}. Intenta con otras opciones.`,
               variant: "default",
-            });
-          } else {
-            // Initialize image data state for all restaurants
-            const initialImageData: Record<string, RestaurantImageData> = {};
-            result.forEach(resto => {
-              const imageKey = `${resto.name}-${resto.address}`; // Use a more unique key
-              initialImageData[imageKey] = { loading: true };
-            });
-            setRestaurantImageData(initialImageData);
-
-            // Trigger image generation for all restaurants
-            result.forEach(resto => {
-              const imageKey = `${resto.name}-${resto.address}`;
-              const imageGenInput: GenerateRestaurantImageInput = {
-                restaurantName: resto.name,
-                cuisine: selectedCuisine, // Use the main selected cuisine for context
-                city: city
-              };
-
-              generateRestaurantImage(imageGenInput)
-                .then(imageResult => {
-                  setRestaurantImageData(prev => ({
-                    ...prev,
-                    [imageKey]: { loading: false, dataUri: imageResult.imageDataUri }
-                  }));
-                })
-                .catch(imgErr => {
-                  console.error(`Error al generar imagen para ${resto.name}:`, imgErr);
-                  setRestaurantImageData(prev => ({
-                    ...prev,
-                    [imageKey]: { loading: false, error: 'Error al generar imagen', dataUri: 'https://placehold.co/600x400.png' } // Fallback image
-                  }));
-                });
             });
           }
         } else {
@@ -178,6 +145,61 @@ export default function GlobalGrubFinderPage() {
       }
     });
   };
+
+  // useEffect para generar imágenes después de que los restaurantes se hayan cargado
+  useEffect(() => {
+    if (restaurants.length > 0 && !isRestaurantsLoading) {
+      const initialImageDataForAllRestaurants: Record<string, RestaurantImageData> = {};
+      
+      restaurants.forEach(resto => {
+        const imageKey = `${resto.name}-${resto.address}`;
+        // Solo inicializar si no existe o si la carga anterior falló y queremos reintentar (opcional)
+        // Por ahora, siempre inicializamos a 'loading: true' si no hay imagen o hubo error.
+        if (!restaurantImageData[imageKey] || restaurantImageData[imageKey]?.error || !restaurantImageData[imageKey]?.dataUri) {
+           initialImageDataForAllRestaurants[imageKey] = { loading: true };
+        } else {
+           initialImageDataForAllRestaurants[imageKey] = restaurantImageData[imageKey]; // Mantener si ya está cargada y OK
+        }
+      });
+      setRestaurantImageData(prev => ({ ...prev, ...initialImageDataForAllRestaurants }));
+
+
+      restaurants.forEach(resto => {
+        const imageKey = `${resto.name}-${resto.address}`;
+        
+        // Solo generar si está marcado como 'loading: true' en el estado actual o recién inicializado
+        if (initialImageDataForAllRestaurants[imageKey]?.loading || (restaurantImageData[imageKey]?.loading && !restaurantImageData[imageKey]?.dataUri)) {
+          const imageGenInput: GenerateRestaurantImageInput = {
+            restaurantName: resto.name,
+            cuisine: selectedCuisine, // Usar selectedCuisine del estado del componente
+            city: city // Usar city del estado del componente
+          };
+
+          const fetchImage = async (key: string, input: GenerateRestaurantImageInput) => {
+            try {
+              const imageResult = await generateRestaurantImage(input);
+              setRestaurantImageData(prev => ({
+                ...prev,
+                [key]: { loading: false, dataUri: imageResult.imageDataUri }
+              }));
+            } catch (imgErr) {
+              console.error(`Error al generar imagen para ${input.restaurantName}:`, imgErr);
+              setRestaurantImageData(prev => ({
+                ...prev,
+                [key]: { loading: false, error: 'Error al generar imagen', dataUri: 'https://placehold.co/600x400.png' }
+              }));
+            }
+          };
+          fetchImage(imageKey, imageGenInput);
+        }
+      });
+    }
+  // Dependencias clave: restaurants para saber cuándo actuar,
+  // selectedCuisine y city para los inputs de generación de imagen.
+  // isRestaurantsLoading para asegurar que la transición principal haya terminado.
+  // No se incluye restaurantImageData para evitar bucles, la lógica interna previene la regeneración.
+  }, [restaurants, selectedCuisine, city, isRestaurantsLoading]);
+
 
   return (
     <div className="container mx-auto px-4 py-8 min-h-screen flex flex-col items-center">
@@ -313,7 +335,7 @@ export default function GlobalGrubFinderPage() {
             Resultados de Restaurantes para {city}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
-            {restaurants.map((resto, index) => {
+            {restaurants.map((resto) => { // Quitamos el 'index' si no se usa para la key
               const imageKey = `${resto.name}-${resto.address}`; 
               const imageData = restaurantImageData[imageKey];
               return (
@@ -360,3 +382,4 @@ export default function GlobalGrubFinderPage() {
     </div>
   );
 }
+
