@@ -42,15 +42,19 @@ export default function GlobalGrubFinderPage() {
   const [isRestaurantsLoading, startRestaurantsTransition] = useTransition();
   
   const [error, setError] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false); // Nuevo estado para rastrear si se ha buscado
   const { toast } = useToast();
 
+  // Efecto para cuando cambia la cocina principal
   useEffect(() => {
+    setRestaurants([]);
+    setRestaurantImageData({});
+    setError(null);
+    setHasSearched(false); // Resetear estado de búsqueda
+
     if (selectedCuisine) {
-      setError(null);
-      setRestaurants([]); 
-      setRestaurantImageData({});
-      setSubCuisines([ALL_SUBCUISINES_OPTION]); 
-      setSelectedSubCuisine(ALL_SUBCUISINES_OPTION); 
+      setSubCuisines([ALL_SUBCUISINES_OPTION]);
+      setSelectedSubCuisine(ALL_SUBCUISINES_OPTION); // Esto dispara el efecto de selectedSubCuisine
       startSubCuisinesTransition(async () => {
         try {
           const result = await getSubCuisines({ cuisine: selectedCuisine });
@@ -78,27 +82,31 @@ export default function GlobalGrubFinderPage() {
         }
       });
     } else {
+      // Si se deselecciona la cocina
       setSubCuisines([ALL_SUBCUISINES_OPTION]);
       setSelectedSubCuisine(ALL_SUBCUISINES_OPTION);
-      setRestaurants([]); 
-      setRestaurantImageData({});
-      setError(null);
     }
   }, [selectedCuisine, toast]);
 
+  // Efecto para cuando cambia la sub-cocina
   useEffect(() => {
-    if (selectedCuisine || selectedSubCuisine) { 
-        setRestaurants([]);
-        setRestaurantImageData({});
-        setError(null);
+    // Solo actuar si hay una cocina seleccionada, para evitar limpiezas innecesarias al inicio
+    if (selectedCuisine) {
+      setRestaurants([]);
+      setRestaurantImageData({});
+      setError(null);
+      setHasSearched(false); // Resetear estado de búsqueda
     }
-  }, [selectedSubCuisine, selectedCuisine]);
+  }, [selectedSubCuisine]);
 
+  // Efecto para cuando cambia la ciudad
   useEffect(() => {
     setRestaurants([]);
     setRestaurantImageData({});
     setError(null);
+    setHasSearched(false); // Resetear estado de búsqueda
   }, [city]);
+
 
   const handleFindRestaurants = () => {
     if (!selectedCuisine || !selectedSubCuisine || !city) {
@@ -109,9 +117,10 @@ export default function GlobalGrubFinderPage() {
       });
       return;
     }
+    setHasSearched(true); // Marcar que se ha intentado una búsqueda
     setError(null);
-    setRestaurants([]); // Limpiar restaurantes antes de la nueva búsqueda
-    setRestaurantImageData({}); // Limpiar datos de imágenes anteriores también
+    setRestaurants([]); 
+    setRestaurantImageData({}); 
     startRestaurantsTransition(async () => {
       try {
         const subCuisineToSearch = selectedSubCuisine === ALL_SUBCUISINES_OPTION ? '' : selectedSubCuisine;
@@ -122,13 +131,18 @@ export default function GlobalGrubFinderPage() {
         };
         const result = await findRestaurantsWithAmbiance(searchInput);
         if (result) {
-          setRestaurants(result); // Esto disparará el useEffect de abajo para generar imágenes
+          setRestaurants(result); 
           if (result.length === 0) {
+            // El toast de "No se encontraron" se maneja mejor por el mensaje en la UI.
+            // Podemos eliminar este toast específico si el mensaje de la UI es suficiente.
+            // Por ahora lo mantenemos, pero podría ser redundante con el mensaje visual.
+            /*
             toast({
               title: "No se Encontraron Restaurantes",
               description: `No se pudieron encontrar restaurantes para ${selectedCuisine}${subCuisineToSearch ? ` - ${subCuisineToSearch}` : ''} en ${city}. Intenta con otras opciones.`,
               variant: "default",
             });
+            */
           }
         } else {
           throw new Error("Formato de respuesta inválido para restaurantes.");
@@ -146,33 +160,28 @@ export default function GlobalGrubFinderPage() {
     });
   };
 
-  // useEffect para generar imágenes después de que los restaurantes se hayan cargado
   useEffect(() => {
     if (restaurants.length > 0 && !isRestaurantsLoading) {
       const initialImageDataForAllRestaurants: Record<string, RestaurantImageData> = {};
       
       restaurants.forEach(resto => {
         const imageKey = `${resto.name}-${resto.address}`;
-        // Solo inicializar si no existe o si la carga anterior falló y queremos reintentar (opcional)
-        // Por ahora, siempre inicializamos a 'loading: true' si no hay imagen o hubo error.
         if (!restaurantImageData[imageKey] || restaurantImageData[imageKey]?.error || !restaurantImageData[imageKey]?.dataUri) {
            initialImageDataForAllRestaurants[imageKey] = { loading: true };
         } else {
-           initialImageDataForAllRestaurants[imageKey] = restaurantImageData[imageKey]; // Mantener si ya está cargada y OK
+           initialImageDataForAllRestaurants[imageKey] = restaurantImageData[imageKey]; 
         }
       });
       setRestaurantImageData(prev => ({ ...prev, ...initialImageDataForAllRestaurants }));
 
-
       restaurants.forEach(resto => {
         const imageKey = `${resto.name}-${resto.address}`;
         
-        // Solo generar si está marcado como 'loading: true' en el estado actual o recién inicializado
         if (initialImageDataForAllRestaurants[imageKey]?.loading || (restaurantImageData[imageKey]?.loading && !restaurantImageData[imageKey]?.dataUri)) {
           const imageGenInput: GenerateRestaurantImageInput = {
             restaurantName: resto.name,
-            cuisine: selectedCuisine, // Usar selectedCuisine del estado del componente
-            city: city // Usar city del estado del componente
+            cuisine: selectedCuisine, 
+            city: city 
           };
 
           const fetchImage = async (key: string, input: GenerateRestaurantImageInput) => {
@@ -194,11 +203,7 @@ export default function GlobalGrubFinderPage() {
         }
       });
     }
-  // Dependencias clave: restaurants para saber cuándo actuar,
-  // selectedCuisine y city para los inputs de generación de imagen.
-  // isRestaurantsLoading para asegurar que la transición principal haya terminado.
-  // No se incluye restaurantImageData para evitar bucles, la lógica interna previene la regeneración.
-  }, [restaurants, selectedCuisine, city, isRestaurantsLoading]);
+  }, [restaurants, selectedCuisine, city, isRestaurantsLoading, restaurantImageData]);
 
 
   return (
@@ -313,16 +318,15 @@ export default function GlobalGrubFinderPage() {
                     <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
                 </div>
                 <CardContent className="p-4 flex-grow">
-                  <div className="h-6 bg-muted animate-pulse rounded w-3/4 mb-2"></div> {/* Name placeholder */}
-                  <div className="flex items-center mb-2"> {/* Rating placeholder */}
+                  <div className="h-6 bg-muted animate-pulse rounded w-3/4 mb-2"></div>
+                  <div className="flex items-center mb-2"> 
                     {[...Array(5)].map((_, s_idx) => (
                         <div key={s_idx} className="w-5 h-5 bg-muted animate-pulse rounded-sm mr-1"></div>
                     ))}
-                     <div className="h-4 bg-muted animate-pulse rounded w-1/4 ml-2"></div> {/* Review count placeholder */}
+                     <div className="h-4 bg-muted animate-pulse rounded w-1/4 ml-2"></div>
                   </div>
-                  <div className="h-4 bg-muted animate-pulse rounded w-full mb-1"></div> {/* Address placeholder */}
-                  <div className="h-4 bg-muted animate-pulse rounded w-5/6 mb-3"></div> {/* Phone placeholder */}
-                  
+                  <div className="h-4 bg-muted animate-pulse rounded w-full mb-1"></div>
+                  <div className="h-4 bg-muted animate-pulse rounded w-5/6 mb-3"></div>
                 </CardContent>
               </Card>
           ))}
@@ -335,7 +339,7 @@ export default function GlobalGrubFinderPage() {
             Resultados de Restaurantes para {city}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
-            {restaurants.map((resto) => { // Quitamos el 'index' si no se usa para la key
+            {restaurants.map((resto) => {
               const imageKey = `${resto.name}-${resto.address}`; 
               const imageData = restaurantImageData[imageKey];
               return (
@@ -352,32 +356,55 @@ export default function GlobalGrubFinderPage() {
         </div>
       )}
       
-      {!isRestaurantsLoading && restaurants.length === 0 && selectedCuisine && selectedSubCuisine && city && !error && (
-        <div className="text-center py-10 w-full max-w-3xl">
-          <MapPin className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-          <p className="text-xl text-muted-foreground">
-            No se encontraron restaurantes que coincidan con tus criterios en {city}.
-          </p>
-          <p className="text-muted-foreground">Intenta con diferentes opciones de cocina, sub-cocina o ciudad.</p>
-        </div>
-      )}
+      {/* Mensajes para cuando no hay resultados o la búsqueda no se ha realizado */}
+      {!isRestaurantsLoading && restaurants.length === 0 && !error && (
+        <>
+          {/* CASO 1: Búsqueda realizada, pero sin resultados */}
+          {hasSearched && selectedCuisine && city && (
+            <div className="text-center py-10 w-full max-w-3xl">
+              <MapPin className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+              <p className="text-xl text-muted-foreground">
+                No se encontraron restaurantes que coincidan con tus criterios en {city}.
+              </p>
+              <p className="text-muted-foreground">Intenta con diferentes opciones de cocina, sub-cocina o ciudad.</p>
+            </div>
+          )}
 
-      { !city && !isRestaurantsLoading && !error && !selectedCuisine && ( 
-         <div className="text-center py-10 w-full max-w-3xl mt-8">
-          <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-          <p className="text-xl text-muted-foreground">
-            Comienza seleccionando un tipo de cocina e ingresando una ciudad para descubrir restaurantes.
-          </p>
-        </div>
-      )}
+          {/* CASO 2: Aún no se ha buscado */}
+          {!hasSearched && (
+            <>
+              {/* Subcaso 2a: Campos principales listos para buscar */}
+              {selectedCuisine && city && (
+                <div className="text-center py-10 w-full max-w-3xl mt-8">
+                  <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                  <p className="text-xl text-muted-foreground">
+                    Comienza seleccionando un tipo de cocina e ingresando una ciudad para descubrir restaurantes.
+                  </p>
+                </div>
+              )}
 
-       { city && !selectedCuisine && !isRestaurantsLoading && !error && ( 
-         <div className="text-center py-10 w-full max-w-3xl mt-8">
-          <UtensilsCrossed className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-          <p className="text-xl text-muted-foreground">
-            Por favor, selecciona un tipo de cocina para buscar en {city}.
-          </p>
-        </div>
+              {/* Subcaso 2b: Ciudad ingresada, pero sin cocina */}
+              {!selectedCuisine && city && (
+                <div className="text-center py-10 w-full max-w-3xl mt-8">
+                  <UtensilsCrossed className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                  <p className="text-xl text-muted-foreground">
+                    Por favor, selecciona un tipo de cocina para buscar en {city}.
+                  </p>
+                </div>
+              )}
+
+              {/* Subcaso 2c: Sin ciudad (y por ende, aún no se puede buscar efectivamente) */}
+              {!city && (
+                <div className="text-center py-10 w-full max-w-3xl mt-8">
+                  <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                  <p className="text-xl text-muted-foreground">
+                    Comienza seleccionando un tipo de cocina e ingresando una ciudad para descubrir restaurantes.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
     </div>
   );
