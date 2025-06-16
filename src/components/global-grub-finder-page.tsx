@@ -23,6 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 
 const ALL_SUBCUISINES_OPTION = "Todas";
+const LOCAL_STORAGE_CITY_KEY = 'globalGrubFinderLastCity';
 
 interface RestaurantImageData {
   loading: boolean;
@@ -44,6 +45,23 @@ export default function GlobalGrubFinderPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const { toast } = useToast();
+
+  // Load city from localStorage on initial mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedCity = localStorage.getItem(LOCAL_STORAGE_CITY_KEY);
+      if (savedCity) {
+        setCity(savedCity);
+      }
+    }
+  }, []);
+
+  // Save city to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_CITY_KEY, city);
+    }
+  }, [city]);
 
   useEffect(() => {
     setRestaurants([]);
@@ -87,7 +105,7 @@ export default function GlobalGrubFinderPage() {
   }, [selectedCuisine, toast]);
 
   useEffect(() => {
-    if (selectedCuisine) { // Added selectedCuisine to ensure logic runs if it changes
+    if (selectedCuisine) { 
       setRestaurants([]);
       setRestaurantImageData({});
       setError(null);
@@ -149,7 +167,6 @@ export default function GlobalGrubFinderPage() {
       restaurants.forEach(resto => {
         const imageKey = `${resto.name}-${resto.address}`;
         
-        // Only fetch if not already present, not loading, and no error
         const existingImageData = restaurantImageData[imageKey];
         if (!existingImageData || (!existingImageData.dataUri && !existingImageData.loading && !existingImageData.error)) {
           
@@ -182,7 +199,6 @@ export default function GlobalGrubFinderPage() {
           fetchImage(imageKey, imageGenInput);
         }
       });
-       // Clean up old image data if restaurants list changed significantly
        const newImageKeys = restaurants.map(r => `${r.name}-${r.address}`);
        const keysToDelete = currentImageKeys.filter(k => !newImageKeys.includes(k));
        if (keysToDelete.length > 0) {
@@ -193,7 +209,6 @@ export default function GlobalGrubFinderPage() {
          });
        }
     }
-  // restaurantImageData should not be a dependency here to avoid infinite loops
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurants, selectedCuisine, city, isRestaurantsLoading]);
 
@@ -317,9 +332,9 @@ export default function GlobalGrubFinderPage() {
                     ))}
                      <div className="h-4 bg-muted animate-pulse rounded w-1/4 ml-2"></div>
                   </div>
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/3 mb-3"></div> {/* For price level */}
                   <div className="h-4 bg-muted animate-pulse rounded w-full mb-1"></div>
                   <div className="h-4 bg-muted animate-pulse rounded w-5/6 mb-1"></div>
-                  <div className="h-4 bg-muted animate-pulse rounded w-1/3 mb-3"></div> {/* For price level */}
                 </CardContent>
               </Card>
           ))}
@@ -374,3 +389,5 @@ export default function GlobalGrubFinderPage() {
     </div>
   );
 }
+
+    
