@@ -18,7 +18,7 @@ import { CUISINE_TYPES } from '@/lib/constants';
 import { getSubCuisines, type GetSubCuisinesOutput } from '@/ai/flows/get-sub-cuisines';
 import { findRestaurantsWithAmbiance, type FindRestaurantsWithAmbianceOutput, type FindRestaurantsWithAmbianceInput } from '@/ai/flows/find-restaurants-with-ambiance';
 import { generateRestaurantImage, type GenerateRestaurantImageInput } from '@/ai/flows/generate-restaurant-image';
-import { AlertCircle, UtensilsCrossed, Search, MapPin, Building, ListFilter, Star, Image as ImageIcon, Tag } from 'lucide-react';
+import { AlertCircle, UtensilsCrossed, Search, MapPin, Building, ListFilter, Star, Image as ImageIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -300,10 +300,7 @@ export default function GlobalGrubFinderPage() {
                   </div>
                   <div className="h-4 bg-muted animate-pulse rounded w-full mb-1"></div> {/* Address placeholder */}
                   <div className="h-4 bg-muted animate-pulse rounded w-5/6 mb-3"></div> {/* Phone placeholder */}
-                  <div className="flex items-center mt-2"> {/* Promotion placeholder */}
-                    <div className="w-4 h-4 bg-muted animate-pulse rounded-sm mr-2"></div>
-                    <div className="h-4 bg-muted animate-pulse rounded w-1/2"></div>
-                  </div>
+                  
                 </CardContent>
               </Card>
           ))}
