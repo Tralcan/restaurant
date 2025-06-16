@@ -4,8 +4,9 @@
 import Image from 'next/image';
 import type { FindRestaurantsWithAmbianceOutput } from '@/ai/flows/find-restaurants-with-ambiance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { MapPin, Phone, Star, ImageIcon, AlertTriangle } from 'lucide-react';
+import { MapPin, Phone, Star, ImageIcon, AlertTriangle, Tag } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 type Restaurant = FindRestaurantsWithAmbianceOutput[0];
@@ -126,12 +127,27 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
             <span>{restaurant.address}</span>
           </div>
           {restaurant.phoneNumber && (
-            <div className="flex items-center text-sm text-muted-foreground">
+            <div className="flex items-center text-sm text-muted-foreground mb-3">
               <Phone className="w-4 h-4 mr-2 text-accent shrink-0" />
               <a href={`tel:${cleanedPhoneNumber}`} className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded">
                 {restaurant.phoneNumber}
               </a>
             </div>
+          )}
+          {restaurant.promotionDetails && (
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center text-sm text-primary mt-2 cursor-default">
+                    <Tag className="w-4 h-4 mr-2 shrink-0" />
+                    <span className="font-medium">Promoción Disponible</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="start" className="bg-popover text-popover-foreground shadow-md rounded-md p-2 max-w-xs">
+                  <p className="text-sm">{restaurant.promotionDetails}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
       </CardContent>
