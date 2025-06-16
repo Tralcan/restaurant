@@ -38,9 +38,7 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
     }
     
     const src = imageDataUri || restaurant.imageUrl || 'https://placehold.co/600x400.png';
-    // El data-ai-hint es más útil para el placeholder original. Si tenemos una imagen generada, es menos relevante.
-    // Podríamos hacerlo más específico si usáramos el placeholder, ej: `data-ai-hint={restaurant.cuisine}`
-    const aiHint = imageDataUri ? undefined : restaurant.cuisine?.split(' ')[0].toLowerCase() || "food";
+    const aiHint = imageDataUri ? undefined : restaurant.name?.toLowerCase().split(" ").slice(0,2).join(" ") || "restaurant food";
 
 
     return (
@@ -53,18 +51,17 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
           "transition-transform duration-300 ease-in-out",
           restaurant.websiteUrl && "group-hover:scale-105"
         )}
-        data-ai-hint={aiHint} // Pista para Unsplash si se usa el placeholder
-        onError={(e) => { // Fallback si la imagen (incluida la generada si fuera una URL) falla
-          if (!imageDataUri) { // Solo cambia a placeholder si no es una data URI fallida
+        data-ai-hint={aiHint}
+        onError={(e) => { 
+          if (!imageDataUri) { 
             const target = e.target as HTMLImageElement;
-            target.srcset = 'https://placehold.co/600x400.png'; // Sin texto
+            target.srcset = 'https://placehold.co/600x400.png'; 
             target.src = 'https://placehold.co/600x400.png';
           }
         }}
       />
     );
   };
-
 
   const ImageAndTitleContent = () => (
     <div className="relative w-full h-48 md:h-56">
@@ -78,6 +75,8 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
       </CardTitle>
     </div>
   );
+
+  const cleanedPhoneNumber = restaurant.phoneNumber ? restaurant.phoneNumber.replace(/\D/g, '') : '';
 
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out flex flex-col h-full bg-card/80 backdrop-blur-sm">
@@ -129,7 +128,9 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
           {restaurant.phoneNumber && (
             <div className="flex items-center text-sm text-muted-foreground">
               <Phone className="w-4 h-4 mr-2 text-accent shrink-0" />
-              <span>{restaurant.phoneNumber}</span>
+              <a href={`tel:${cleanedPhoneNumber}`} className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded">
+                {restaurant.phoneNumber}
+              </a>
             </div>
           )}
         </div>
