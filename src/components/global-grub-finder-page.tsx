@@ -42,19 +42,18 @@ export default function GlobalGrubFinderPage() {
   const [isRestaurantsLoading, startRestaurantsTransition] = useTransition();
   
   const [error, setError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false); // Nuevo estado para rastrear si se ha buscado
+  const [hasSearched, setHasSearched] = useState(false);
   const { toast } = useToast();
 
-  // Efecto para cuando cambia la cocina principal
   useEffect(() => {
     setRestaurants([]);
     setRestaurantImageData({});
     setError(null);
-    setHasSearched(false); // Resetear estado de búsqueda
+    setHasSearched(false);
 
     if (selectedCuisine) {
       setSubCuisines([ALL_SUBCUISINES_OPTION]);
-      setSelectedSubCuisine(ALL_SUBCUISINES_OPTION); // Esto dispara el efecto de selectedSubCuisine
+      setSelectedSubCuisine(ALL_SUBCUISINES_OPTION);
       startSubCuisinesTransition(async () => {
         try {
           const result = await getSubCuisines({ cuisine: selectedCuisine });
@@ -82,29 +81,25 @@ export default function GlobalGrubFinderPage() {
         }
       });
     } else {
-      // Si se deselecciona la cocina
       setSubCuisines([ALL_SUBCUISINES_OPTION]);
       setSelectedSubCuisine(ALL_SUBCUISINES_OPTION);
     }
   }, [selectedCuisine, toast]);
 
-  // Efecto para cuando cambia la sub-cocina
   useEffect(() => {
-    // Solo actuar si hay una cocina seleccionada, para evitar limpiezas innecesarias al inicio
     if (selectedCuisine) {
       setRestaurants([]);
       setRestaurantImageData({});
       setError(null);
-      setHasSearched(false); // Resetear estado de búsqueda
+      setHasSearched(false);
     }
-  }, [selectedSubCuisine]);
+  }, [selectedSubCuisine, selectedCuisine]); // Added selectedCuisine as a dependency
 
-  // Efecto para cuando cambia la ciudad
   useEffect(() => {
     setRestaurants([]);
     setRestaurantImageData({});
     setError(null);
-    setHasSearched(false); // Resetear estado de búsqueda
+    setHasSearched(false);
   }, [city]);
 
 
@@ -117,7 +112,7 @@ export default function GlobalGrubFinderPage() {
       });
       return;
     }
-    setHasSearched(true); // Marcar que se ha intentado una búsqueda
+    setHasSearched(true);
     setError(null);
     setRestaurants([]); 
     setRestaurantImageData({}); 
@@ -132,18 +127,6 @@ export default function GlobalGrubFinderPage() {
         const result = await findRestaurantsWithAmbiance(searchInput);
         if (result) {
           setRestaurants(result); 
-          if (result.length === 0) {
-            // El toast de "No se encontraron" se maneja mejor por el mensaje en la UI.
-            // Podemos eliminar este toast específico si el mensaje de la UI es suficiente.
-            // Por ahora lo mantenemos, pero podría ser redundante con el mensaje visual.
-            /*
-            toast({
-              title: "No se Encontraron Restaurantes",
-              description: `No se pudieron encontrar restaurantes para ${selectedCuisine}${subCuisineToSearch ? ` - ${subCuisineToSearch}` : ''} en ${city}. Intenta con otras opciones.`,
-              variant: "default",
-            });
-            */
-          }
         } else {
           throw new Error("Formato de respuesta inválido para restaurantes.");
         }
@@ -162,22 +145,19 @@ export default function GlobalGrubFinderPage() {
 
   useEffect(() => {
     if (restaurants.length > 0 && !isRestaurantsLoading) {
-      const initialImageDataForAllRestaurants: Record<string, RestaurantImageData> = {};
-      
-      restaurants.forEach(resto => {
-        const imageKey = `${resto.name}-${resto.address}`;
-        if (!restaurantImageData[imageKey] || restaurantImageData[imageKey]?.error || !restaurantImageData[imageKey]?.dataUri) {
-           initialImageDataForAllRestaurants[imageKey] = { loading: true };
-        } else {
-           initialImageDataForAllRestaurants[imageKey] = restaurantImageData[imageKey]; 
-        }
-      });
-      setRestaurantImageData(prev => ({ ...prev, ...initialImageDataForAllRestaurants }));
-
       restaurants.forEach(resto => {
         const imageKey = `${resto.name}-${resto.address}`;
         
-        if (initialImageDataForAllRestaurants[imageKey]?.loading || (restaurantImageData[imageKey]?.loading && !restaurantImageData[imageKey]?.dataUri)) {
+        // Access restaurantImageData via closure.
+        // Check if image needs fetching (not already loading, not loaded, no error to prevent re-fetch on error)
+        if (!restaurantImageData[imageKey] || (!restaurantImageData[imageKey].dataUri && !restaurantImageData[imageKey].loading && !restaurantImageData[imageKey].error)) {
+          
+          // Mark as loading before initiating the fetch to prevent multiple fetches for the same image
+          setRestaurantImageData(prev => ({
+            ...prev,
+            [imageKey]: { ...prev[imageKey], loading: true, error: undefined }, // Clear previous error if any
+          }));
+
           const imageGenInput: GenerateRestaurantImageInput = {
             restaurantName: resto.name,
             cuisine: selectedCuisine, 
@@ -189,13 +169,13 @@ export default function GlobalGrubFinderPage() {
               const imageResult = await generateRestaurantImage(input);
               setRestaurantImageData(prev => ({
                 ...prev,
-                [key]: { loading: false, dataUri: imageResult.imageDataUri }
+                [key]: { loading: false, dataUri: imageResult.imageDataUri },
               }));
             } catch (imgErr) {
               console.error(`Error al generar imagen para ${input.restaurantName}:`, imgErr);
               setRestaurantImageData(prev => ({
                 ...prev,
-                [key]: { loading: false, error: 'Error al generar imagen', dataUri: 'https://placehold.co/600x400.png' }
+                [key]: { loading: false, error: 'Error al generar imagen', dataUri: 'https://placehold.co/600x400.png' },
               }));
             }
           };
@@ -203,7 +183,8 @@ export default function GlobalGrubFinderPage() {
         }
       });
     }
-  }, [restaurants, selectedCuisine, city, isRestaurantsLoading, restaurantImageData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurants, selectedCuisine, city, isRestaurantsLoading]);
 
 
   return (
@@ -356,10 +337,8 @@ export default function GlobalGrubFinderPage() {
         </div>
       )}
       
-      {/* Mensajes para cuando no hay resultados o la búsqueda no se ha realizado */}
       {!isRestaurantsLoading && restaurants.length === 0 && !error && (
         <>
-          {/* CASO 1: Búsqueda realizada, pero sin resultados */}
           {hasSearched && selectedCuisine && city && (
             <div className="text-center py-10 w-full max-w-3xl">
               <MapPin className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
@@ -370,39 +349,13 @@ export default function GlobalGrubFinderPage() {
             </div>
           )}
 
-          {/* CASO 2: Aún no se ha buscado */}
           {!hasSearched && (
-            <>
-              {/* Subcaso 2a: Campos principales listos para buscar */}
-              {selectedCuisine && city && (
-                <div className="text-center py-10 w-full max-w-3xl mt-8">
-                  <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                  <p className="text-xl text-muted-foreground">
-                    Comienza seleccionando un tipo de cocina e ingresando una ciudad para descubrir restaurantes.
-                  </p>
-                </div>
-              )}
-
-              {/* Subcaso 2b: Ciudad ingresada, pero sin cocina */}
-              {!selectedCuisine && city && (
-                <div className="text-center py-10 w-full max-w-3xl mt-8">
-                  <UtensilsCrossed className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                  <p className="text-xl text-muted-foreground">
-                    Por favor, selecciona un tipo de cocina para buscar en {city}.
-                  </p>
-                </div>
-              )}
-
-              {/* Subcaso 2c: Sin ciudad (y por ende, aún no se puede buscar efectivamente) */}
-              {!city && (
-                <div className="text-center py-10 w-full max-w-3xl mt-8">
-                  <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                  <p className="text-xl text-muted-foreground">
-                    Comienza seleccionando un tipo de cocina e ingresando una ciudad para descubrir restaurantes.
-                  </p>
-                </div>
-              )}
-            </>
+            <div className="text-center py-10 w-full max-w-3xl mt-8">
+              <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+              <p className="text-xl text-muted-foreground">
+                Comienza seleccionando un tipo de cocina e ingresando una ciudad para descubrir restaurantes.
+              </p>
+            </div>
           )}
         </>
       )}
