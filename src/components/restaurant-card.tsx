@@ -5,7 +5,7 @@ import Image from 'next/image';
 import type { FindRestaurantsWithAmbianceOutput } from '@/ai/flows/find-restaurants-with-ambiance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { MapPin, Phone, Star, ImageIcon, AlertTriangle } from 'lucide-react';
+import { MapPin, Phone, Star, ImageIcon, AlertTriangle, DollarSign } from 'lucide-react'; // DollarSign no se usará directamente por ahora, pero es bueno tenerlo si se cambia.
 
 type Restaurant = FindRestaurantsWithAmbianceOutput[0];
 
@@ -130,6 +130,12 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
               <a href={`tel:${cleanedPhoneNumber}`} className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded">
                 {restaurant.phoneNumber}
               </a>
+            </div>
+          )}
+          {restaurant.priceLevel && (
+            <div className="flex items-center text-sm text-muted-foreground mb-3">
+              <span className="font-semibold mr-2 text-accent">Precio:</span>
+              <span className="font-bold text-foreground">{restaurant.priceLevel}</span>
             </div>
           )}
         </div>
