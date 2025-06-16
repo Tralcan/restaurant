@@ -87,7 +87,7 @@ export default function GlobalGrubFinderPage() {
   }, [selectedCuisine, toast]);
 
   useEffect(() => {
-    if (selectedCuisine) { 
+    if (selectedCuisine || selectedSubCuisine) { 
         setRestaurants([]);
         setRestaurantImageData({});
         setError(null);
@@ -130,13 +130,20 @@ export default function GlobalGrubFinderPage() {
               variant: "default",
             });
           } else {
+            // Initialize image data state for all restaurants
+            const initialImageData: Record<string, RestaurantImageData> = {};
             result.forEach(resto => {
-              const imageKey = resto.name; 
-              setRestaurantImageData(prev => ({ ...prev, [imageKey]: { loading: true } }));
-              
+              const imageKey = `${resto.name}-${resto.address}`; // Use a more unique key
+              initialImageData[imageKey] = { loading: true };
+            });
+            setRestaurantImageData(initialImageData);
+
+            // Trigger image generation for all restaurants
+            result.forEach(resto => {
+              const imageKey = `${resto.name}-${resto.address}`;
               const imageGenInput: GenerateRestaurantImageInput = {
                 restaurantName: resto.name,
-                cuisine: selectedCuisine,
+                cuisine: selectedCuisine, // Use the main selected cuisine for context
                 city: city
               };
 
@@ -151,7 +158,7 @@ export default function GlobalGrubFinderPage() {
                   console.error(`Error al generar imagen para ${resto.name}:`, imgErr);
                   setRestaurantImageData(prev => ({
                     ...prev,
-                    [imageKey]: { loading: false, error: 'Error al generar imagen', dataUri: 'https://placehold.co/600x400.png' }
+                    [imageKey]: { loading: false, error: 'Error al generar imagen', dataUri: 'https://placehold.co/600x400.png' } // Fallback image
                   }));
                 });
             });
@@ -278,7 +285,7 @@ export default function GlobalGrubFinderPage() {
 
       {isRestaurantsLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
-          {[...Array(6)].map((_, i) => ( // Increased to 6 skeletons
+          {[...Array(9)].map((_, i) => ( 
              <Card key={i} className="overflow-hidden shadow-lg flex flex-col h-full">
                 <div className="relative w-full h-48 md:h-56 bg-muted animate-pulse flex items-center justify-center">
                     <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
@@ -306,7 +313,7 @@ export default function GlobalGrubFinderPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
             {restaurants.map((resto, index) => {
-              const imageKey = `${resto.name}-${resto.address}`; // More unique key
+              const imageKey = `${resto.name}-${resto.address}`; 
               const imageData = restaurantImageData[imageKey];
               return (
                 <RestaurantCard 

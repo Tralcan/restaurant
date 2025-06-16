@@ -32,7 +32,7 @@ const RestaurantSchema = z.object({
   reviewCount: z.number().int().min(0).optional().describe('El número total de reseñas que tiene el restaurante.'),
 });
 
-const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).min(0).max(9).describe('Un arreglo de entre 0 y 9 restaurantes que coinciden con los criterios. Intenta devolver alrededor de 6-9 si se encuentran coincidencias.');
+const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).min(0).max(12).describe('Un arreglo de entre 0 y 12 restaurantes que coinciden con los criterios. Intenta devolver alrededor de 10-12 si se encuentran coincidencias.');
 export type FindRestaurantsWithAmbianceOutput = z.infer<typeof FindRestaurantsWithAmbianceOutputSchema>;
 
 export async function findRestaurantsWithAmbiance(input: FindRestaurantsWithAmbianceInput): Promise<FindRestaurantsWithAmbianceOutput> {
@@ -42,10 +42,10 @@ export async function findRestaurantsWithAmbiance(input: FindRestaurantsWithAmbi
 const findRestaurantsPrompt = ai.definePrompt({
   name: 'findRestaurantsPrompt',
   input: {schema: FindRestaurantsWithAmbianceInputSchema},
-  output: {schema: FindRestaurantsWithAmbianceOutputSchema.describe("Devuelve un arreglo JSON de restaurantes que coinciden con los criterios. Intenta devolver entre 6 y 9 restaurantes si es posible. Para 'websiteUrl', solo incluye el campo si encuentras una URL de sitio web real y funcional. De lo contrario, omítelo o deja su valor nulo/vacío.")},
+  output: {schema: FindRestaurantsWithAmbianceOutputSchema.describe("Devuelve un arreglo JSON de restaurantes que coinciden con los criterios. Intenta devolver entre 10 y 12 restaurantes si es posible. Para 'websiteUrl', solo incluye el campo si encuentras una URL de sitio web real y funcional. De lo contrario, omítelo o deja su valor nulo/vacío.")},
   prompt: `Eres una IA buscadora de restaurantes. Encuentra restaurantes basados en la cocina, ciudad y, opcionalmente, la sub-cocina especificada por el usuario.
     Debes intentar proporcionar nombres de restaurantes, direcciones, números de teléfono, URLs de sitios web, calificaciones y número de reseñas diversos y que suenen realistas dentro de la ciudad especificada.
-    Intenta devolver entre 6 y 9 restaurantes si es posible.
+    Intenta devolver entre 10 y 12 restaurantes si es posible.
     Para 'imageUrl', DEBES usar 'https://placehold.co/600x400.png' para cada restaurante. No intentes encontrar o generar otras URLs de imágenes.
     Conceptualmente, esta imagen debe representar el ambiente del restaurante, idealmente como una foto tomada por un cliente o del sitio web del restaurante, presentando un ambiente de cena nocturno, buena atmósfera y gente si es apropiado.
     Devuelve un arreglo JSON de restaurantes.
