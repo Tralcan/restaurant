@@ -15,4 +15,6 @@ export const CUISINE_TYPES = [
   'Brazilian',
   'Caribbean',
   'African',
+  'Peruvian',
 ];
+
