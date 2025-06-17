@@ -2,16 +2,14 @@
 "use client";
 
 import Image from 'next/image';
-import type { FindRestaurantsWithAmbianceOutput } from '@/ai/flows/find-restaurants-with-ambiance';
+import type { Restaurant } from '@/ai/flows/find-restaurants-with-ambiance'; // Importar el tipo Restaurant
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { MapPin, Phone, Star, ImageIcon, AlertTriangle, DollarSign, ExternalLink } from 'lucide-react';
 
-type Restaurant = FindRestaurantsWithAmbianceOutput[0];
-
 interface RestaurantCardProps {
   restaurant: Restaurant;
-  city: string; // Nueva prop para la ciudad
+  city: string; 
   imageDataUri?: string;
   isImageLoading?: boolean;
   imageError?: string;
@@ -39,7 +37,9 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
     }
     
     const src = imageDataUri || restaurant.imageUrl || 'https://placehold.co/600x400.png';
-    const aiHint = imageDataUri ? undefined : restaurant.name?.toLowerCase().split(" ").slice(0,2).join(" ") || "restaurant food";
+    // Usar el nombre del restaurante y la ciudad para el data-ai-hint si no hay imagen de la API, o palabras genéricas.
+    const aiHint = imageDataUri ? undefined : `${restaurant.name?.toLowerCase().split(" ").slice(0,1).join("")} ${city.toLowerCase().split(" ").slice(0,1).join("")}`.trim() || "restaurant food";
+
 
     return (
       <Image
@@ -90,7 +90,6 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
             target="_blank"
             rel="noopener noreferrer"
             className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded-sm"
-            onClick={(e) => e.stopPropagation()} 
             aria-label={`Buscar ${restaurant.name} en Google`}
           >
             {restaurant.name}
@@ -127,7 +126,7 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
             </div>
           )}
           
-          {restaurant.priceLevel && (
+          {restaurant.priceLevel && restaurant.priceLevel !== 'Desconocido' && (
             <div className="flex items-center text-sm text-muted-foreground mb-3">
               <DollarSign className="w-4 h-4 mr-2 text-accent shrink-0" />
               <span className="font-semibold mr-1 text-accent">Precio:</span>
@@ -136,8 +135,8 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
           )}
 
            {restaurant.address && (
-            <div className="flex items-center text-sm text-muted-foreground mb-2">
-              <MapPin className="w-4 h-4 mr-2 text-accent shrink-0" />
+            <div className="flex items-start text-sm text-muted-foreground mb-2"> {/* items-start para multilínea */}
+              <MapPin className="w-4 h-4 mr-2 text-accent shrink-0 mt-0.5" /> {/* mt-0.5 para alinear ícono */}
               <span>{restaurant.address}</span>
             </div>
            )}
@@ -168,3 +167,4 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
     </Card>
   );
 }
+

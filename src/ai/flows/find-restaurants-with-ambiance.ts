@@ -2,90 +2,198 @@
 // src/ai/flows/find-restaurants-with-ambiance.ts
 'use server';
 /**
- * @fileOverview Este archivo define un flujo de Genkit para encontrar restaurantes que coincidan con una cocina, sub-cocina (opcional) y ciudad especificadas,
- * priorizando resultados con imágenes que representen un ambiente de cena nocturno. También incluye calificaciones, número de reseñas, URL del sitio web y nivel de precios.
+ * @fileOverview Este archivo define un flujo de Genkit para encontrar restaurantes reales usando Google Places API
+ * y luego enriquecerlos con una descripción de ambiente generada por IA.
  *
- * - findRestaurantsWithAmbiance -  Una función para iniciar el flujo de búsqueda de restaurantes.
+ * - findRestaurantsWithAmbiance - Una función para iniciar el flujo de búsqueda de restaurantes.
  * - FindRestaurantsWithAmbianceInput - El tipo de entrada para la función findRestaurantsWithAmbiance.
  * - FindRestaurantsWithAmbianceOutput - El tipo de salida para la función findRestaurantsWithAmbiance.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {Client, PlaceInputType} from '@googlemaps/google-maps-services-js';
+
+const googleMapsClient = new Client({});
 
 const FindRestaurantsWithAmbianceInputSchema = z.object({
   cuisine: z.string().describe('El tipo de cocina (ej., Italiana, Mexicana).'),
-  subCuisine: z.string().optional().describe('La sub-cocina específica (ej., pizza, tacos). Si está vacío o no se proporciona, busca todas las sub-cocinas del tipo de cocina principal.'),
+  subCuisine: z.string().optional().describe('La sub-cocina específica (ej., pizza, tacos). Puede ser usado para refinar la búsqueda si es relevante.'),
   city: z.string().describe('La ciudad donde el usuario quiere encontrar restaurantes.'),
 });
 export type FindRestaurantsWithAmbianceInput = z.infer<typeof FindRestaurantsWithAmbianceInputSchema>;
 
 const RestaurantSchema = z.object({
   name: z.string().describe('El nombre del restaurante.'),
-  imageUrl: z.string().describe("URL de una imagen. DEBE ser 'https://placehold.co/600x400.png' inicialmente. Esta será reemplazada por una imagen generada por IA en el cliente si es necesario."),
-  address: z.string().optional().describe("La dirección del restaurante. Proporciona esto SOLO si tienes una alta confianza de que corresponde a un negocio real que 'conoces' por tu entrenamiento Y que está ubicado en la ciudad especificada. De lo contrario, omite este campo."),
-  phoneNumber: z.string().optional().describe("El número de teléfono del restaurante. Proporciona esto SOLO si tienes una alta confianza de que corresponde a un negocio real que 'conoces' por tu entrenamiento, el formato es plausible para la ciudad especificada, Y el negocio está ubicado en la ciudad especificada. De lo contrario, omite este campo."),
-  websiteUrl: z.string().optional().describe('La URL válida y existente del sitio web del restaurante (ej., https://www.ejemplorestaurante.com). Proporciona esto SOLO si tienes una alta confianza de que corresponde a un negocio real que "conoces" por tu entrenamiento Y que está ubicado en la ciudad especificada. De lo contrario, omite este campo.'),
-  description: z.string().optional().describe('Una breve descripción del restaurante.'),
-  rating: z.number().min(1).max(5).optional().describe('La calificación del restaurante, de 1 a 5 estrellas (puede ser decimal, ej. 4.5). Simula datos de sitios como Google o TripAdvisor.'),
+  imageUrl: z.string().describe("URL de una imagen. DEBE ser 'https://placehold.co/600x400.png' inicialmente. Esta será reemplazada por una imagen generada por IA en el cliente."),
+  address: z.string().optional().describe("La dirección formateada del restaurante."),
+  phoneNumber: z.string().optional().describe("El número de teléfono internacional formateado del restaurante."),
+  websiteUrl: z.string().optional().describe('La URL del sitio web del restaurante.'),
+  description: z.string().optional().describe('Una breve descripción del restaurante, enfocada en el ambiente nocturno.'),
+  rating: z.number().min(0).max(5).optional().describe('La calificación promedio del restaurante, de 0 a 5 estrellas.'),
   reviewCount: z.number().int().min(0).optional().describe('El número total de reseñas que tiene el restaurante.'),
-  priceLevel: z.enum(['$', '$$', '$$$', '$$$$']).optional().describe("El nivel de precios del restaurante, donde '$' es económico, '$$' es moderado, '$$$' es caro y '$$$$' es muy caro. Intenta asignar uno si es posible."),
+  priceLevel: z.enum(['$', '$$', '$$$', '$$$$', 'Desconocido']).optional().describe("El nivel de precios del restaurante."),
+  // Campo específico de Google Places para futuras referencias o para obtener más detalles.
+  placeId: z.string().optional().describe("El ID de Google Places del restaurante."),
 });
+export type Restaurant = z.infer<typeof RestaurantSchema>;
 
-const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).min(0).max(12).describe("Un arreglo de entre 0 y 12 restaurantes que coinciden con los criterios. Intenta devolver alrededor de 10-12 si se encuentran coincidencias. Para 'address', 'phoneNumber' y 'websiteUrl', sé MUY CONSERVADOR: solo inclúyelos si tienes una alta confianza de que corresponden a un negocio real que 'conoces' de tu entrenamiento Y que dicho negocio está ubicado en la ciudad especificada. Es preferible omitirlos a inventarlos incorrectamente o ubicarlos erróneamente. Los otros campos (nombre, descripción, rating, reviewCount, priceLevel) pueden ser simulaciones plausibles.");
+const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).min(0).max(12).describe("Un arreglo de hasta 12 restaurantes encontrados.");
 export type FindRestaurantsWithAmbianceOutput = z.infer<typeof FindRestaurantsWithAmbianceOutputSchema>;
 
-export async function findRestaurantsWithAmbiance(input: FindRestaurantsWithAmbianceInput): Promise<FindRestaurantsWithAmbianceOutput> {
-  return findRestaurantsWithAmbianceFlow(input);
-}
+// Herramienta para buscar restaurantes usando Google Places API
+const searchGooglePlacesTool = ai.defineTool({
+  name: 'searchGooglePlacesTool',
+  description: 'Busca restaurantes reales en Google Places y devuelve sus detalles.',
+  inputSchema: z.object({
+    cuisine: z.string(),
+    subCuisine: z.string().optional(),
+    city: z.string(),
+  }),
+  outputSchema: z.array(RestaurantSchema),
+}, async ({ cuisine, subCuisine, city }) => {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error('GOOGLE_MAPS_API_KEY no está configurada en las variables de entorno.');
+  }
 
-const findRestaurantsPrompt = ai.definePrompt({
-  name: 'findRestaurantsPrompt',
-  input: {schema: FindRestaurantsWithAmbianceInputSchema},
-  output: {schema: FindRestaurantsWithAmbianceOutputSchema},
-  prompt: `Eres una IA buscadora de restaurantes. Encuentra restaurantes basados en la cocina, ciudad y, opcionalmente, la sub-cocina especificada por el usuario.
-    Tu objetivo principal es proporcionar nombres de restaurantes que SEAN CONOCIDOS POR ESTAR UBICADOS EN LA CIUDAD ESPECIFICADA ({{{city}}}).
+  let searchQuery = `${cuisine} ${subCuisine || ''} restaurantes en ${city}`;
+  if (cuisine.toLowerCase() === 'todas') {
+    searchQuery = `restaurantes en ${city} ${subCuisine || ''}`;
+  }
 
-    Para los campos 'address', 'phoneNumber', y 'websiteUrl':
-    - SOLO debes proporcionar estos detalles si tienes una ALTA CONFIANZA de que corresponden a un negocio real y específico que "conoces" a través de tu extenso entrenamiento Y QUE ESTÁ UBICADO EN LA CIUDAD {{{city}}}.
-    - Si no estás seguro de la ubicación en ESA CIUDAD o si la información sería puramente especulativa para esa localidad, DEBES OMITIR estos campos para ese restaurante. Es preferible no dar esta información que dar una incorrecta o de un restaurante en otra ciudad.
-    - Si proporcionas un 'phoneNumber', asegúrate de que el formato sea realista y plausible para la ciudad especificada ({{{city}}}).
-    - Si proporcionas un 'websiteUrl', asegúrate de que sea una URL válida y que creas que existe para un negocio en {{{city}}}.
 
-    Para los demás campos (name, description, rating, reviewCount, priceLevel):
-    - Para el 'name', prioriza restaurantes que tengas una alta confianza que existen en {{{city}}}.
-    - Los demás campos (description, rating, reviewCount, priceLevel) pueden ser simulaciones realistas inspiradas en tu conocimiento, una vez que hayas identificado un nombre de restaurante plausible para {{{city}}}.
+  try {
+    const response = await googleMapsClient.textSearch({
+      params: {
+        query: searchQuery,
+        key: apiKey,
+        type: 'restaurant', // Busca específicamente restaurantes
+        language: 'es', // Pide resultados en español
+      },
+    });
 
-    Intenta devolver entre 10 y 12 restaurantes si es posible, pero prioriza la veracidad de la ubicación del restaurante en {{{city}}} y la calidad de la información de contacto (si se proporciona) sobre la cantidad.
-    Para 'imageUrl', DEBES usar 'https://placehold.co/600x400.png' para cada restaurante. No intentes encontrar o generar otras URLs de imágenes.
-    Conceptualmente, esta imagen debe representar el ambiente del restaurante, idealmente como una foto tomada por un cliente o del sitio web del restaurante, presentando un ambiente de cena nocturno, buena atmósfera y gente si es apropiado.
+    const places = response.data.results;
+    if (!places) return [];
 
-    Devuelve un arreglo JSON de restaurantes.
+    const restaurantPromises = places.slice(0, 15).map(async (place) => {
+      // Obtener detalles para cada lugar para obtener número de teléfono, sitio web, etc.
+      let placeDetails = null;
+      if (place.place_id) {
+        try {
+            const detailsResponse = await googleMapsClient.placeDetails({
+                params: {
+                    place_id: place.place_id,
+                    fields: ['name', 'formatted_address', 'international_phone_number', 'website', 'rating', 'user_ratings_total', 'price_level', 'place_id'],
+                    key: apiKey,
+                    language: 'es',
+                }
+            });
+            placeDetails = detailsResponse.data.result;
+        } catch (detailError) {
+            console.error(`Error obteniendo detalles para place_id ${place.place_id}:`, detailError);
+            // Continuar con la información básica si los detalles fallan
+        }
+      }
+      
+      const currentPlace = placeDetails || place;
 
-    Cocina: {{{cuisine}}}
-    {{#if subCuisine}}
-    Sub-Cocina: {{{subCuisine}}}
-    {{else}}
-    Sub-Cocina: Cualquiera (Buscar todos los tipos de restaurantes de {{{cuisine}}})
-    {{/if}}
-    Ciudad: {{{city}}}
-  `,
+
+      let priceLevelString: Restaurant['priceLevel'] = 'Desconocido';
+      if (typeof currentPlace.price_level === 'number') {
+        if (currentPlace.price_level === 1) priceLevelString = '$';
+        else if (currentPlace.price_level === 2) priceLevelString = '$$';
+        else if (currentPlace.price_level === 3) priceLevelString = '$$$';
+        else if (currentPlace.price_level >= 4) priceLevelString = '$$$$';
+      }
+
+      return {
+        name: currentPlace.name || 'Nombre no disponible',
+        imageUrl: 'https://placehold.co/600x400.png', // Placeholder, se generará en cliente
+        address: currentPlace.formatted_address,
+        phoneNumber: currentPlace.international_phone_number,
+        websiteUrl: currentPlace.website,
+        rating: currentPlace.rating,
+        reviewCount: currentPlace.user_ratings_total,
+        priceLevel: priceLevelString,
+        description: '', // Se llenará por la IA después
+        placeId: currentPlace.place_id,
+      };
+    });
+    return Promise.all(restaurantPromises);
+  } catch (error) {
+    console.error('Error llamando a Google Places API:', error);
+    return []; // Devuelve un arreglo vacío en caso de error
+  }
 });
 
+// Prompt para añadir una descripción enfocada en el ambiente
+const addAmbianceDescriptionPrompt = ai.definePrompt({
+  name: 'addAmbianceDescriptionPrompt',
+  input: { schema: RestaurantSchema.extend({ originalCuisineQuery: z.string(), originalCityQuery: z.string() }) },
+  output: { schema: z.object({ description: z.string().optional() }) },
+  prompt: `Eres un experto en describir ambientes de restaurantes.
+Dado el siguiente restaurante, que es un lugar real obtenido de una base de datos:
+Nombre: {{{name}}}
+Tipo de Cocina (según búsqueda): {{{originalCuisineQuery}}}
+Ciudad: {{{originalCityQuery}}}
+Dirección: {{{address}}} (si está disponible)
+Nivel de Precio: {{{priceLevel}}} (si está disponible)
+Rating: {{{rating}}} (si está disponible)
+
+Por favor, escribe una descripción corta y evocadora (1-2 frases concisas) que resalte un potencial ambiente de cena nocturno, buena atmósfera, idealmente con gente disfrutando.
+Si el tipo de restaurante no se presta mucho a "ambiente nocturno" (ej. una cafetería de desayuno), enfócate en describir su atmósfera general agradable y acogedora.
+El objetivo es crear una imagen atractiva para alguien que busca una experiencia de cena especial. La imagen del restaurante se generará por separado para coincidir con esta descripción de ambiente.
+Responde solo con la descripción.
+`,
+});
+
+
+export async function findRestaurantsWithAmbiance(input: FindRestaurantsWithAmbianceInput): Promise<FindRestaurantsWithAmbianceOutput> {
+  // 1. Llamar a la herramienta para obtener datos reales de restaurantes
+  const restaurantsFromPlaces = await searchGooglePlacesTool({
+    cuisine: input.cuisine,
+    subCuisine: input.subCuisine,
+    city: input.city,
+  });
+
+  if (!restaurantsFromPlaces || restaurantsFromPlaces.length === 0) {
+    return [];
+  }
+
+  // 2. Para cada restaurante, enriquecer con una descripción de ambiente generada por IA
+  const enrichedRestaurantsPromises = restaurantsFromPlaces.slice(0, 12).map(async (restaurant) => {
+    try {
+      const { output } = await addAmbianceDescriptionPrompt({
+        ...restaurant, // Pasa todos los datos del restaurante obtenidos de Places
+        originalCuisineQuery: input.cuisine, // Pasa la consulta original de cocina
+        originalCityQuery: input.city,     // Pasa la consulta original de ciudad
+      });
+      return {
+        ...restaurant,
+        description: output?.description || restaurant.description || `Un restaurante de cocina ${input.cuisine} en ${input.city}.`, // Fallback description
+      };
+    } catch (e) {
+      console.error(`Error generando descripción para ${restaurant.name}:`, e);
+      return {
+        ...restaurant,
+        description: restaurant.description || `Un restaurante de cocina ${input.cuisine} en ${input.city}.`, // Fallback
+      };
+    }
+  });
+
+  const enrichedRestaurants = await Promise.all(enrichedRestaurantsPromises);
+  return enrichedRestaurants;
+}
+
+// Mantener el flujo de Genkit para que sea invocable
 const findRestaurantsWithAmbianceFlow = ai.defineFlow(
   {
     name: 'findRestaurantsWithAmbianceFlow',
     inputSchema: FindRestaurantsWithAmbianceInputSchema,
     outputSchema: FindRestaurantsWithAmbianceOutputSchema,
   },
-  async input => {
-    const {output} = await findRestaurantsPrompt(input);
-
-    if (!output) {
-        return [];
-    }
-    // Filtro adicional para asegurar que al menos el nombre y la ciudad parezcan razonables,
-    // aunque la IA ya debería estar haciendo esto.
-    return output.filter(restaurant => restaurant.name && restaurant.name.trim() !== '');
+  async (input) => {
+    return findRestaurantsWithAmbiance(input);
   }
 );

@@ -16,7 +16,7 @@ import { Loader } from '@/components/ui/loader';
 import { useToast } from '@/hooks/use-toast';
 import { CUISINE_TYPES } from '@/lib/constants';
 import { getSubCuisines, type GetSubCuisinesOutput } from '@/ai/flows/get-sub-cuisines';
-import { findRestaurantsWithAmbiance, type FindRestaurantsWithAmbianceOutput, type FindRestaurantsWithAmbianceInput } from '@/ai/flows/find-restaurants-with-ambiance';
+import { findRestaurantsWithAmbiance, type FindRestaurantsWithAmbianceOutput, type FindRestaurantsWithAmbianceInput, type Restaurant } from '@/ai/flows/find-restaurants-with-ambiance';
 import { generateRestaurantImage, type GenerateRestaurantImageInput } from '@/ai/flows/generate-restaurant-image';
 import { AlertCircle, UtensilsCrossed, Search, MapPin, Building, ListFilter, Star, Image as ImageIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -69,7 +69,7 @@ export default function GlobalGrubFinderPage() {
     setError(null);
     setHasSearched(false);
 
-    if (selectedCuisine) {
+    if (selectedCuisine && selectedCuisine.toLowerCase() !== 'todas') {
       setSubCuisines([ALL_SUBCUISINES_OPTION]);
       setSelectedSubCuisine(ALL_SUBCUISINES_OPTION);
       startSubCuisinesTransition(async () => {
@@ -85,16 +85,17 @@ export default function GlobalGrubFinderPage() {
               });
             }
           } else {
-            throw new Error("Formato de respuesta inválido para sub-cocinas.");
+            // No es un error grave si no hay subcocinas, el flujo principal puede continuar
+             setSubCuisines([ALL_SUBCUISINES_OPTION]);
           }
         } catch (err) {
-          console.error('Error al obtener sub-cocinas:', err);
-          const errorMessage = err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
-          setError(`Error al obtener sub-cocinas: ${errorMessage}`);
-          toast({
-            title: 'Error',
-            description: `No se pudieron obtener las sub-cocinas para ${selectedCuisine}.`,
-            variant: 'destructive',
+          console.warn('Advertencia al obtener sub-cocinas (puede ignorarse si la cocina es general):', err);
+          // No establecer error global, permitir que la búsqueda principal continúe
+           setSubCuisines([ALL_SUBCUISINES_OPTION]);
+           toast({
+            title: 'Advertencia de Sub-cocinas',
+            description: `No se pudieron obtener sub-cocinas específicas para ${selectedCuisine}. Se buscará de forma general.`,
+            variant: 'default',
           });
         }
       });
@@ -122,10 +123,10 @@ export default function GlobalGrubFinderPage() {
 
 
   const handleFindRestaurants = () => {
-    if (!selectedCuisine || !selectedSubCuisine || !city) {
+    if (!selectedCuisine || !city) {
       toast({
         title: 'Selección Incompleta',
-        description: 'Por favor, selecciona un tipo de cocina, una sub-cocina (o "Todas"), y ingresa una ciudad.',
+        description: 'Por favor, selecciona un tipo de cocina e ingresa una ciudad.',
         variant: 'default',
       });
       return;
@@ -136,7 +137,7 @@ export default function GlobalGrubFinderPage() {
     setRestaurantImageData({}); 
     startRestaurantsTransition(async () => {
       try {
-        const subCuisineToSearch = selectedSubCuisine === ALL_SUBCUISINES_OPTION ? '' : selectedSubCuisine;
+        const subCuisineToSearch = selectedSubCuisine === ALL_SUBCUISINES_OPTION || selectedCuisine.toLowerCase() === 'todas' ? undefined : selectedSubCuisine;
         const searchInput: FindRestaurantsWithAmbianceInput = {
           cuisine: selectedCuisine,
           subCuisine: subCuisineToSearch,
@@ -145,6 +146,9 @@ export default function GlobalGrubFinderPage() {
         const result = await findRestaurantsWithAmbiance(searchInput);
         if (result) {
           setRestaurants(result); 
+          if (result.length === 0) {
+             setError(`No se encontraron restaurantes para "${selectedCuisine}" en "${city}". Prueba con otros criterios.`);
+          }
         } else {
           throw new Error("Formato de respuesta inválido para restaurantes.");
         }
@@ -153,8 +157,8 @@ export default function GlobalGrubFinderPage() {
         const errorMessage = err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
         setError(`Error al obtener restaurantes: ${errorMessage}`);
         toast({
-          title: 'Error',
-          description: 'No se pudieron obtener los restaurantes. Por favor, inténtalo de nuevo.',
+          title: 'Error de Búsqueda',
+          description: 'No se pudieron obtener los restaurantes. Verifica tu conexión o la clave de API de Google Maps.',
           variant: 'destructive',
         });
       }
@@ -165,7 +169,8 @@ export default function GlobalGrubFinderPage() {
     if (restaurants.length > 0 && !isRestaurantsLoading) {
       const currentImageKeys = Object.keys(restaurantImageData);
       restaurants.forEach(resto => {
-        const imageKey = `${resto.name}-${resto.address || city}-${selectedCuisine}`; // Clave más única
+        // Usar placeId si está disponible para una clave más única, sino una combinación.
+        const imageKey = resto.placeId || `${resto.name}-${resto.address || city}-${selectedCuisine}`;
         
         const existingImageData = restaurantImageData[imageKey];
         if (!existingImageData || (!existingImageData.dataUri && !existingImageData.loading && !existingImageData.error)) {
@@ -199,7 +204,7 @@ export default function GlobalGrubFinderPage() {
           fetchImage(imageKey, imageGenInput);
         }
       });
-       const newImageKeys = restaurants.map(r => `${r.name}-${r.address || city}-${selectedCuisine}`);
+       const newImageKeys = restaurants.map(r => r.placeId || `${r.name}-${r.address || city}-${selectedCuisine}`);
        const keysToDelete = currentImageKeys.filter(k => !newImageKeys.includes(k));
        if (keysToDelete.length > 0) {
          setRestaurantImageData(prev => {
@@ -252,7 +257,7 @@ export default function GlobalGrubFinderPage() {
             <Select
               value={selectedSubCuisine}
               onValueChange={setSelectedSubCuisine}
-              disabled={!selectedCuisine || isSubCuisinesLoading}
+              disabled={!selectedCuisine || isSubCuisinesLoading || selectedCuisine.toLowerCase() === 'todas'}
             >
               <SelectTrigger id="subcuisine-select" className="w-full bg-input text-foreground border-border focus:ring-accent">
                  <div className="flex items-center">
@@ -272,7 +277,7 @@ export default function GlobalGrubFinderPage() {
                     </SelectItem>
                   ))
                 )}
-                {!isSubCuisinesLoading && subCuisines.length === 1 && selectedCuisine && ( 
+                {!isSubCuisinesLoading && subCuisines.length === 1 && selectedCuisine && selectedCuisine.toLowerCase() !== 'todas' && ( 
                    <p className="p-4 text-sm text-muted-foreground">No se encontraron sub-cocinas específicas. Buscando "Todas las de {selectedCuisine}".</p>
                 )}
               </SelectContent>
@@ -297,7 +302,7 @@ export default function GlobalGrubFinderPage() {
         </div>
         <Button
             onClick={handleFindRestaurants}
-            disabled={!selectedCuisine || !selectedSubCuisine || !city || isRestaurantsLoading || isSubCuisinesLoading}
+            disabled={!selectedCuisine || !city || isRestaurantsLoading || isSubCuisinesLoading}
             className="w-full text-lg py-3 bg-primary hover:bg-primary/90 text-primary-foreground focus:ring-accent"
           >
             {isRestaurantsLoading ? (
@@ -309,10 +314,10 @@ export default function GlobalGrubFinderPage() {
           </Button>
       </div>
 
-      {error && (
+      {error && !isRestaurantsLoading && (
          <Alert variant="destructive" className="w-full max-w-3xl mb-8">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>Información</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -344,17 +349,17 @@ export default function GlobalGrubFinderPage() {
       {!isRestaurantsLoading && restaurants.length > 0 && (
         <div className="w-full max-w-6xl">
           <h2 className="text-3xl font-semibold text-primary-foreground mb-8 text-center">
-            Resultados de Restaurantes para {city}
+            Resultados de Restaurantes en {city}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
             {restaurants.map((resto) => {
-              const imageKey = `${resto.name}-${resto.address || city}-${selectedCuisine}`; 
+              const imageKey = resto.placeId || `${resto.name}-${resto.address || city}-${selectedCuisine}`; 
               const imageData = restaurantImageData[imageKey];
               return (
                 <RestaurantCard 
                   key={imageKey} 
                   restaurant={resto}
-                  city={city} // Pasar la ciudad a la tarjeta
+                  city={city}
                   imageDataUri={imageData?.dataUri}
                   isImageLoading={imageData?.loading}
                   imageError={imageData?.error}
@@ -373,7 +378,7 @@ export default function GlobalGrubFinderPage() {
               <p className="text-xl text-muted-foreground">
                 No se encontraron restaurantes que coincidan con tus criterios en {city}.
               </p>
-              <p className="text-muted-foreground">Intenta con diferentes opciones de cocina, sub-cocina o ciudad.</p>
+              <p className="text-muted-foreground">Intenta con diferentes opciones de cocina o revisa los términos de búsqueda.</p>
             </div>
           )}
 
@@ -390,3 +395,4 @@ export default function GlobalGrubFinderPage() {
     </div>
   );
 }
+
