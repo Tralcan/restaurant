@@ -24,7 +24,7 @@ const RestaurantSchema = z.object({
   name: z.string().describe('El nombre del restaurante.'),
   imageUrl: z.string().describe("URL de una imagen. DEBE ser 'https://placehold.co/600x400.png' inicialmente. Esta será reemplazada por una imagen generada por IA en el cliente si es necesario."),
   address: z.string().optional().describe("La dirección del restaurante. Proporciona una dirección plausible si es posible, o omite este campo."),
-  phoneNumber: z.string().optional().describe("El número de teléfono del restaurante. Si se incluye, debe ser un número de teléfono con formato realista y plausible para la ciudad especificada. Evita números claramente falsos. Omite si no puedes generar uno realista."),
+  phoneNumber: z.string().optional().describe("El número de teléfono del restaurante. Si se incluye, debe ser un número de teléfono con formato realista y plausible para la ciudad especificada (ej., (555) 123-4567 para ciudades de EE. UU., o un formato local apropiado para otras ciudades). Evita números claramente falsos o secuencias aleatorias. Si no puedes generar uno realista, omite este campo."),
   websiteUrl: z.string().optional().describe('La URL válida y existente del sitio web del restaurante (ej., https://www.ejemplorestaurante.com). Si no se encuentra un sitio web real y funcional, este campo debe omitirse o dejarse nulo/vacío. Debe ser una URL válida si se proporciona.'),
   description: z.string().optional().describe('Una breve descripción del restaurante.'),
   rating: z.number().min(1).max(5).optional().describe('La calificación del restaurante, de 1 a 5 estrellas (puede ser decimal, ej. 4.5). Simula datos de sitios como Google o TripAdvisor.'),
@@ -68,7 +68,7 @@ const findRestaurantsPrompt = ai.definePrompt({
     - description: Una breve descripción del restaurante.
     - rating: Un número entre 1 y 5 (puede ser decimal, ej. 4, 3.5, 4.8) que represente la calificación promedio del restaurante.
     - reviewCount: Un número entero no negativo que represente la cantidad de reseñas recibidas por el restaurante.
-    - priceLevel: (Opcional) Una representación textual del nivel de precios (por ejemplo, "$", "$$", "$$$", o "$$$$"). Donde "$" es barato/económico, "$$" es moderado, "$$$" es caro, y "$$$$" es muy caro/lujoso. Intenta asignar uno.
+    - priceLevel: (Opcional) Una representación textual del nivel de precios (por ejemplo, "$", "$$", "$$$", o "$$$$"). Intenta asignar uno.
   `,
 });
 
