@@ -22,16 +22,16 @@ export type FindRestaurantsWithAmbianceInput = z.infer<typeof FindRestaurantsWit
 const RestaurantSchema = z.object({
   name: z.string().describe('El nombre del restaurante.'),
   imageUrl: z.string().describe("URL de una imagen. DEBE ser 'https://placehold.co/600x400.png' inicialmente. Esta será reemplazada por una imagen generada por IA en el cliente si es necesario."),
-  address: z.string().optional().describe("La dirección del restaurante. Proporciona este dato SOLO si puedes simular un ejemplo altamente realista y típico para la ciudad y cocina dadas. Si la información sería especulativa o inventada, es PREFERIBLE omitir este campo o usar 'No disponible'. No inventes direcciones que no parezcan auténticas."),
-  phoneNumber: z.string().optional().describe("El número de teléfono del restaurante. Proporciona este dato SOLO si puedes simular un ejemplo altamente realista y típico para la ciudad y cocina dadas. Si la información sería especulativa o inventada, es PREFERIBLE omitir este campo o usar 'No disponible'. No inventes números de teléfono que no parezcan auténticos."),
+  address: z.string().optional().describe("La dirección del restaurante."),
+  phoneNumber: z.string().optional().describe("El número de teléfono del restaurante."),
   websiteUrl: z.string().optional().describe('La URL válida y existente del sitio web del restaurante (ej., https://www.ejemplorestaurante.com). Si no se encuentra un sitio web real y funcional, este campo debe omitirse o dejarse nulo/vacío. Debe ser una URL válida si se proporciona.'),
   description: z.string().optional().describe('Una breve descripción del restaurante.'),
   rating: z.number().min(1).max(5).optional().describe('La calificación del restaurante, de 1 a 5 estrellas (puede ser decimal, ej. 4.5). Simula datos de sitios como Google o TripAdvisor.'),
   reviewCount: z.number().int().min(0).optional().describe('El número total de reseñas que tiene el restaurante.'),
-  priceLevel: z.enum(['$', '$$', '$$$', '$$$$']).optional().describe("El nivel de precios del restaurante, donde '$' es económico, '$$' es moderado, '$$$' es caro y '$$$$' es muy caro. Este campo ES MUY IMPORTANTE, intenta siempre asignar uno."),
+  priceLevel: z.enum(['$', '$$', '$$$', '$$$$']).optional().describe("El nivel de precios del restaurante, donde '$' es económico, '$$' es moderado, '$$$' es caro y '$$$$' es muy caro."),
 });
 
-const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).min(0).max(12).describe("Un arreglo de entre 0 y 12 restaurantes que coinciden con los criterios. Intenta devolver alrededor de 10-12 si se encuentran coincidencias. Para 'websiteUrl', solo incluye el campo si encuentras una URL de sitio web real y funcional; de lo contrario, omítelo. Para 'priceLevel', **DEBES** asignar uno a cada restaurante; no omitas este campo. Para 'address' y 'phoneNumber', sé muy conservador y prioriza omitirlos si no puedes generar ejemplos altamente realistas y típicos; no inventes datos solo por completar.");
+const FindRestaurantsWithAmbianceOutputSchema = z.array(RestaurantSchema).min(0).max(12).describe("Un arreglo de entre 0 y 12 restaurantes que coinciden con los criterios. Intenta devolver alrededor de 10-12 si se encuentran coincidencias.");
 export type FindRestaurantsWithAmbianceOutput = z.infer<typeof FindRestaurantsWithAmbianceOutputSchema>;
 
 export async function findRestaurantsWithAmbiance(input: FindRestaurantsWithAmbianceInput): Promise<FindRestaurantsWithAmbianceOutput> {
@@ -41,16 +41,12 @@ export async function findRestaurantsWithAmbiance(input: FindRestaurantsWithAmbi
 const findRestaurantsPrompt = ai.definePrompt({
   name: 'findRestaurantsPrompt',
   input: {schema: FindRestaurantsWithAmbianceInputSchema},
-  output: {schema: FindRestaurantsWithAmbianceOutputSchema.describe("Devuelve un arreglo JSON de restaurantes que coinciden con los criterios. Intenta devolver entre 10 y 12 restaurantes si es posible. Para 'websiteUrl', solo incluye el campo si encuentras una URL de sitio web real y funcional. De lo contrario, omítelo o deja su valor nulo/vacío. Para 'priceLevel', **DEBES** asignar uno ('$', '$$', '$$$' o '$$$$') a CADA restaurante; no omitas este campo. Para 'address' y 'phoneNumber', sé muy conservador y prioriza omitirlos si no puedes generar ejemplos altamente realistas y típicos; no inventes datos solo por completar. Si omites 'address' o 'phoneNumber', simplemente no incluyas esas claves en el objeto JSON del restaurante.")},
+  output: {schema: FindRestaurantsWithAmbianceOutputSchema},
   prompt: `Eres una IA buscadora de restaurantes. Encuentra restaurantes basados en la cocina, ciudad y, opcionalmente, la sub-cocina especificada por el usuario.
-    Debes intentar proporcionar nombres de restaurantes, descripciones, URLs de sitios web, calificaciones, número de reseñas y niveles de precios diversos y que suenen realistas dentro de la ciudad especificada.
+    Intenta proporcionar nombres de restaurantes, descripciones, direcciones, números de teléfono, URLs de sitios web, calificaciones, número de reseñas y niveles de precios diversos y que suenen realistas dentro de la ciudad especificada.
     Intenta devolver entre 10 y 12 restaurantes si es posible.
     Para 'imageUrl', DEBES usar 'https://placehold.co/600x400.png' para cada restaurante. No intentes encontrar o generar otras URLs de imágenes.
     Conceptualmente, esta imagen debe representar el ambiente del restaurante, idealmente como una foto tomada por un cliente o del sitio web del restaurante, presentando un ambiente de cena nocturno, buena atmósfera y gente si es apropiado.
-
-    **Instrucciones Críticas para Dirección y Teléfono:**
-    - Para los campos 'address' y 'phoneNumber': Proporciona estos datos **SOLO** si puedes simular ejemplos que sean **altamente realistas y típicos** para la ciudad y tipo de cocina dados.
-    - Si la información para 'address' o 'phoneNumber' sería especulativa, un invento obvio, o no estás seguro de poder generar un ejemplo convincente y realista, **ES PREFERIBLE OMITIR COMPLETAMENTE EL CAMPO** del objeto JSON del restaurante o dejar su valor como nulo/vacío. No inventes direcciones o números de teléfono que no parezcan auténticos solo por rellenar. La calidad y credibilidad son más importantes que la completitud para estos dos campos.
 
     Devuelve un arreglo JSON de restaurantes.
 
@@ -65,13 +61,13 @@ const findRestaurantsPrompt = ai.definePrompt({
     Cada objeto de restaurante en el arreglo debe incluir:
     - name: El nombre del restaurante.
     - imageUrl: ESTO DEBE ser la cadena exacta 'https://placehold.co/600x400.png'.
-    - address: (Opcional, seguir instrucciones críticas arriba) La dirección del restaurante en la ciudad especificada.
-    - phoneNumber: (Opcional, seguir instrucciones críticas arriba) El número de teléfono del restaurante (ej., (555) 123-4567).
-    - websiteUrl: La URL del sitio web del restaurante (ej., https://www.elbuensabor.com). **Solo incluye este campo si encuentras una URL de sitio web real y funcional para el restaurante. Si no encuentras una, OMITE COMPLETAMENTE este campo o deja su valor nulo/vacío.**
+    - address: (Opcional) La dirección del restaurante en la ciudad especificada.
+    - phoneNumber: (Opcional) El número de teléfono del restaurante (ej., (555) 123-4567).
+    - websiteUrl: (Opcional) La URL del sitio web del restaurante (ej., https://www.elbuensabor.com).
     - description: Una breve descripción del restaurante.
     - rating: Un número entre 1 y 5 (puede ser decimal, ej. 4, 3.5, 4.8) que represente la calificación promedio del restaurante.
     - reviewCount: Un número entero no negativo que represente la cantidad de reseñas recibidas por el restaurante.
-    - priceLevel: Una representación textual del nivel de precios (por ejemplo, "$", "$$", "$$$", o "$$$$"). Donde "$" es barato/económico, "$$" es moderado, "$$$" es caro, y "$$$$" es muy caro/lujoso. **DEBES asignar un nivel de precios a CADA restaurante. No omitas este campo.**
+    - priceLevel: (Opcional) Una representación textual del nivel de precios (por ejemplo, "$", "$$", "$$$", o "$$$$"). Donde "$" es barato/económico, "$$" es moderado, "$$$" es caro, y "$$$$" es muy caro/lujoso.
   `,
 });
 
@@ -93,4 +89,3 @@ const findRestaurantsWithAmbianceFlow = ai.defineFlow(
     return output;
   }
 );
-
