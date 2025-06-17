@@ -165,7 +165,7 @@ export default function GlobalGrubFinderPage() {
     if (restaurants.length > 0 && !isRestaurantsLoading) {
       const currentImageKeys = Object.keys(restaurantImageData);
       restaurants.forEach(resto => {
-        const imageKey = `${resto.name}-${resto.address}`;
+        const imageKey = `${resto.name}-${resto.address || city}-${selectedCuisine}`; // Clave más única
         
         const existingImageData = restaurantImageData[imageKey];
         if (!existingImageData || (!existingImageData.dataUri && !existingImageData.loading && !existingImageData.error)) {
@@ -199,7 +199,7 @@ export default function GlobalGrubFinderPage() {
           fetchImage(imageKey, imageGenInput);
         }
       });
-       const newImageKeys = restaurants.map(r => `${r.name}-${r.address}`);
+       const newImageKeys = restaurants.map(r => `${r.name}-${r.address || city}-${selectedCuisine}`);
        const keysToDelete = currentImageKeys.filter(k => !newImageKeys.includes(k));
        if (keysToDelete.length > 0) {
          setRestaurantImageData(prev => {
@@ -348,12 +348,13 @@ export default function GlobalGrubFinderPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
             {restaurants.map((resto) => {
-              const imageKey = `${resto.name}-${resto.address}`; 
+              const imageKey = `${resto.name}-${resto.address || city}-${selectedCuisine}`; 
               const imageData = restaurantImageData[imageKey];
               return (
                 <RestaurantCard 
                   key={imageKey} 
-                  restaurant={resto} 
+                  restaurant={resto}
+                  city={city} // Pasar la ciudad a la tarjeta
                   imageDataUri={imageData?.dataUri}
                   isImageLoading={imageData?.loading}
                   imageError={imageData?.error}
@@ -389,5 +390,3 @@ export default function GlobalGrubFinderPage() {
     </div>
   );
 }
-
-    

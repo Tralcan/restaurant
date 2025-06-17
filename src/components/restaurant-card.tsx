@@ -11,12 +11,13 @@ type Restaurant = FindRestaurantsWithAmbianceOutput[0];
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
+  city: string; // Nueva prop para la ciudad
   imageDataUri?: string;
   isImageLoading?: boolean;
   imageError?: string;
 }
 
-export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, imageError }: RestaurantCardProps) {
+export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading, imageError }: RestaurantCardProps) {
   const displayRating = restaurant.rating ? Math.round(restaurant.rating * 2) / 2 : null; // Rounds to nearest 0.5
   const cleanedPhoneNumber = restaurant.phoneNumber ? restaurant.phoneNumber.replace(/\D/g, '') : '';
 
@@ -48,7 +49,7 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
         objectFit="cover"
         className={cn(
           "transition-transform duration-300 ease-in-out",
-          restaurant.websiteUrl && "group-hover:scale-105" // For the <a> tag wrapping the image
+          restaurant.websiteUrl && "group-hover:scale-105" 
         )}
         data-ai-hint={aiHint}
         onError={(e) => { 
@@ -62,6 +63,8 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
     );
   };
 
+  const googleSearchQuery = `restaurant ${restaurant.name} ${city}`;
+
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out flex flex-col h-full bg-card/80 backdrop-blur-sm">
       <div className="relative w-full h-48 md:h-56">
@@ -71,19 +74,19 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Visitar el sitio web de ${restaurant.name}`}
-            className="block group h-full w-full" // 'group' for image hover effects
+            className="block group h-full w-full"
           >
             {renderImageContent()}
           </a>
         ) : (
-          renderImageContent() // Render image without link if no websiteUrl
+          renderImageContent()
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
         <CardTitle className={cn(
           "absolute bottom-4 left-4 text-primary-foreground text-xl lg:text-2xl font-bold drop-shadow-md"
         )}>
           <a
-            href={`https://www.google.cl/search?q=${encodeURIComponent(restaurant.name)}`}
+            href={`https://www.google.cl/search?q=${encodeURIComponent(googleSearchQuery)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded-sm"
