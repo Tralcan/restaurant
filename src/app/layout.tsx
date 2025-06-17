@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google'; // Using Inter as a clean, modern font
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Import Toaster
+import GoogleAnalytics from '@/components/google-analytics';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -13,6 +14,8 @@ export const metadata: Metadata = {
   description: 'Encuentra restaurantes con el ambiente nocturno perfecto.',
 };
 
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,6 +25,7 @@ export default function RootLayout({
     <html lang="es" className="dark">
       {/* Force dark theme by applying 'dark' class to <html> */}
       <body className={`${inter.variable} font-sans antialiased`}>
+        {GA_MEASUREMENT_ID && <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />}
         {children}
         <Toaster /> {/* Add Toaster for notifications */}
       </body>
