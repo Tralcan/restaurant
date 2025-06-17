@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'; // Using Inter as a clean, modern font
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 import GoogleAnalytics from '@/components/google-analytics';
+import React, { Suspense } from 'react'; // Import Suspense
 
 const inter = Inter({
   subsets: ['latin'],
@@ -25,7 +26,11 @@ export default function RootLayout({
     <html lang="es" className="dark">
       {/* Force dark theme by applying 'dark' class to <html> */}
       <body className={`${inter.variable} font-sans antialiased`}>
-        {GA_MEASUREMENT_ID && <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />}
+        {GA_MEASUREMENT_ID && (
+          <Suspense fallback={null}>
+            <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />
+          </Suspense>
+        )}
         {children}
         <Toaster /> {/* Add Toaster for notifications */}
       </body>
