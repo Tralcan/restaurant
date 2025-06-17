@@ -68,9 +68,25 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
       <CardTitle className={cn(
         "absolute bottom-4 left-4 text-primary-foreground text-xl lg:text-2xl font-bold drop-shadow-md",
+        // Aplica group-hover:underline solo si restaurant.websiteUrl existe,
+        // porque 'group' está en el 'a' que envuelve ImageAndTitleContent en ese caso.
+        // Si no hay websiteUrl, el 'a' interno para Google search manejará su propio hover.
         restaurant.websiteUrl && "group-hover:underline"
       )}>
-        {restaurant.name}
+        {restaurant.websiteUrl ? (
+          restaurant.name // Texto plano, el estilo de enlace viene del 'a.group' padre
+        ) : (
+          <a
+            href={`https://www.google.cl/search?q=${encodeURIComponent(restaurant.name)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded-sm"
+            onClick={(e) => e.stopPropagation()} // Previene que el clic se propague
+            aria-label={`Buscar ${restaurant.name} en Google`}
+          >
+            {restaurant.name}
+          </a>
+        )}
       </CardTitle>
     </div>
   );
@@ -85,12 +101,12 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Visitar el sitio web de ${restaurant.name}`}
-          className="block group cursor-pointer"
+          className="block group cursor-pointer" // 'group' está aquí
         >
           <ImageAndTitleContent />
         </a>
       ) : (
-        <ImageAndTitleContent />
+        <ImageAndTitleContent /> // Sin 'a' exterior. El CardTitle interno tendrá su 'a' para Google.
       )}
       <CardContent className="p-4 flex-grow flex flex-col justify-between">
         <div>
@@ -100,7 +116,6 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
             </CardDescription>
           )}
           
-          {/* BLOQUE DE CALIFICACIÓN Y RESEÑAS */}
           {(displayRating !== null || (restaurant.reviewCount !== undefined && restaurant.reviewCount !== null)) && (
             <div className="flex items-center mb-2">
               {displayRating !== null && Array.from({ length: 5 }, (_, i) => (
@@ -123,7 +138,6 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
             </div>
           )}
           
-          {/* BLOQUE DE NIVEL DE PRECIOS */}
           {restaurant.priceLevel && (
             <div className="flex items-center text-sm text-muted-foreground mb-3">
               <DollarSign className="w-4 h-4 mr-2 text-accent shrink-0" />
