@@ -5,7 +5,7 @@ import Image from 'next/image';
 import type { FindRestaurantsWithAmbianceOutput } from '@/ai/flows/find-restaurants-with-ambiance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { MapPin, Phone, Star, ImageIcon, AlertTriangle, DollarSign } from 'lucide-react';
+import { MapPin, Phone, Star, ImageIcon, AlertTriangle, DollarSign, ExternalLink } from 'lucide-react';
 
 type Restaurant = FindRestaurantsWithAmbianceOutput[0];
 
@@ -18,18 +18,19 @@ interface RestaurantCardProps {
 
 export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, imageError }: RestaurantCardProps) {
   const displayRating = restaurant.rating ? Math.round(restaurant.rating * 2) / 2 : null; // Rounds to nearest 0.5
+  const cleanedPhoneNumber = restaurant.phoneNumber ? restaurant.phoneNumber.replace(/\D/g, '') : '';
 
-  const renderImage = () => {
+  const renderImageContent = () => {
     if (isImageLoading) {
       return (
-        <div className="relative w-full h-48 md:h-56 bg-muted flex items-center justify-center animate-pulse">
+        <div className="relative w-full h-full bg-muted flex items-center justify-center animate-pulse">
           <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
         </div>
       );
     }
     if (imageError) {
       return (
-        <div className="relative w-full h-48 md:h-56 bg-destructive/10 flex flex-col items-center justify-center text-center p-2">
+        <div className="relative w-full h-full bg-destructive/10 flex flex-col items-center justify-center text-center p-2">
           <AlertTriangle className="h-8 w-8 text-destructive mb-2" />
           <p className="text-xs text-destructive-foreground">Error al cargar imagen</p>
         </div>
@@ -39,7 +40,6 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
     const src = imageDataUri || restaurant.imageUrl || 'https://placehold.co/600x400.png';
     const aiHint = imageDataUri ? undefined : restaurant.name?.toLowerCase().split(" ").slice(0,2).join(" ") || "restaurant food";
 
-
     return (
       <Image
         src={src}
@@ -48,7 +48,7 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
         objectFit="cover"
         className={cn(
           "transition-transform duration-300 ease-in-out",
-          restaurant.websiteUrl && "group-hover:scale-105"
+          restaurant.websiteUrl && "group-hover:scale-105" // For the <a> tag wrapping the image
         )}
         data-ai-hint={aiHint}
         onError={(e) => { 
@@ -62,52 +62,38 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
     );
   };
 
-  const ImageAndTitleContent = () => (
-    <div className="relative w-full h-48 md:h-56">
-      {renderImage()}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-      <CardTitle className={cn(
-        "absolute bottom-4 left-4 text-primary-foreground text-xl lg:text-2xl font-bold drop-shadow-md",
-        // Aplica group-hover:underline solo si restaurant.websiteUrl existe,
-        // porque 'group' está en el 'a' que envuelve ImageAndTitleContent en ese caso.
-        // Si no hay websiteUrl, el 'a' interno para Google search manejará su propio hover.
-        restaurant.websiteUrl && "group-hover:underline"
-      )}>
+  return (
+    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out flex flex-col h-full bg-card/80 backdrop-blur-sm">
+      <div className="relative w-full h-48 md:h-56">
         {restaurant.websiteUrl ? (
-          restaurant.name // Texto plano, el estilo de enlace viene del 'a.group' padre
+          <a
+            href={restaurant.websiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Visitar el sitio web de ${restaurant.name}`}
+            className="block group h-full w-full" // 'group' for image hover effects
+          >
+            {renderImageContent()}
+          </a>
         ) : (
+          renderImageContent() // Render image without link if no websiteUrl
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+        <CardTitle className={cn(
+          "absolute bottom-4 left-4 text-primary-foreground text-xl lg:text-2xl font-bold drop-shadow-md"
+        )}>
           <a
             href={`https://www.google.cl/search?q=${encodeURIComponent(restaurant.name)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded-sm"
-            onClick={(e) => e.stopPropagation()} // Previene que el clic se propague
+            onClick={(e) => e.stopPropagation()} 
             aria-label={`Buscar ${restaurant.name} en Google`}
           >
             {restaurant.name}
           </a>
-        )}
-      </CardTitle>
-    </div>
-  );
-
-  const cleanedPhoneNumber = restaurant.phoneNumber ? restaurant.phoneNumber.replace(/\D/g, '') : '';
-
-  return (
-    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out flex flex-col h-full bg-card/80 backdrop-blur-sm">
-      {restaurant.websiteUrl ? (
-        <a
-          href={restaurant.websiteUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Visitar el sitio web de ${restaurant.name}`}
-          className="block group cursor-pointer" // 'group' está aquí
-        >
-          <ImageAndTitleContent />
-        </a>
-      ) : (
-        <ImageAndTitleContent /> // Sin 'a' exterior. El CardTitle interno tendrá su 'a' para Google.
-      )}
+        </CardTitle>
+      </div>
       <CardContent className="p-4 flex-grow flex flex-col justify-between">
         <div>
           {restaurant.description && (
@@ -146,15 +132,31 @@ export function RestaurantCard({ restaurant, imageDataUri, isImageLoading, image
             </div>
           )}
 
-           <div className="flex items-center text-sm text-muted-foreground mb-2">
-            <MapPin className="w-4 h-4 mr-2 text-accent shrink-0" />
-            <span>{restaurant.address}</span>
-          </div>
+           {restaurant.address && (
+            <div className="flex items-center text-sm text-muted-foreground mb-2">
+              <MapPin className="w-4 h-4 mr-2 text-accent shrink-0" />
+              <span>{restaurant.address}</span>
+            </div>
+           )}
           {restaurant.phoneNumber && (
             <div className="flex items-center text-sm text-muted-foreground mb-3">
               <Phone className="w-4 h-4 mr-2 text-accent shrink-0" />
               <a href={`tel:${cleanedPhoneNumber}`} className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded">
                 {restaurant.phoneNumber}
+              </a>
+            </div>
+          )}
+          {restaurant.websiteUrl && (
+             <div className="flex items-center text-sm text-muted-foreground mt-1">
+              <ExternalLink className="w-4 h-4 mr-2 text-accent shrink-0" />
+              <a 
+                href={restaurant.websiteUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded truncate"
+                title={restaurant.websiteUrl}
+              >
+                Visitar sitio web
               </a>
             </div>
           )}

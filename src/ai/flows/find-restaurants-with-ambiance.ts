@@ -48,7 +48,7 @@ const findRestaurantsPrompt = ai.definePrompt({
 
     Para los campos 'address', 'phoneNumber', y 'websiteUrl':
     - SOLO debes proporcionar estos detalles si tienes una ALTA CONFIANZA de que corresponden a un negocio real y específico que "conoces" a través de tu extenso entrenamiento.
-    - Si no estás seguro o si la información sería especulativa, DEBES OMITIR estos campos para ese restaurante. Es mejor no dar esta información que dar una incorrecta.
+    - Si no estás seguro o si la información sería puramente especulativa, DEBES OMITIR estos campos para ese restaurante. Es preferible no dar esta información que dar una incorrecta.
     - Si proporcionas un 'phoneNumber', asegúrate de que el formato sea realista y plausible para la ciudad especificada.
     - Si proporcionas un 'websiteUrl', asegúrate de que sea una URL válida y que creas que existe.
 
