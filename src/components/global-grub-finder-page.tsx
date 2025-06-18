@@ -85,12 +85,10 @@ export default function GlobalGrubFinderPage() {
               });
             }
           } else {
-            // No es un error grave si no hay subcocinas, el flujo principal puede continuar
              setSubCuisines([ALL_SUBCUISINES_OPTION]);
           }
         } catch (err) {
           console.warn('Advertencia al obtener sub-cocinas (puede ignorarse si la cocina es general):', err);
-          // No establecer error global, permitir que la búsqueda principal continúe
            setSubCuisines([ALL_SUBCUISINES_OPTION]);
            toast({
             title: 'Advertencia de Sub-cocinas',
@@ -169,7 +167,6 @@ export default function GlobalGrubFinderPage() {
     if (restaurants.length > 0 && !isRestaurantsLoading) {
       const currentImageKeys = Object.keys(restaurantImageData);
       restaurants.forEach(resto => {
-        // Usar placeId si está disponible para una clave más única, sino una combinación.
         const imageKey = resto.placeId || `${resto.name}-${resto.address || city}-${selectedCuisine}`;
         
         const existingImageData = restaurantImageData[imageKey];
@@ -392,6 +389,24 @@ export default function GlobalGrubFinderPage() {
           )}
         </>
       )}
+      
+      {/* Buy Me A Coffee Button */}
+      <div className="mt-12 py-8 text-center w-full">
+        <a
+          href="https://www.buymeacoffee.com/6hxrhhkvhs2"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Apóyame en Buy Me A Coffee"
+        >
+          <img
+            src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+            alt="Buy Me A Coffee"
+            style={{ height: '60px', width: '217px' }}
+            className="inline-block hover:opacity-90 transition-opacity"
+          />
+        </a>
+      </div>
+
     </div>
   );
 }
