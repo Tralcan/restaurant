@@ -65,7 +65,7 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
   const googleSearchQuery = `restaurant ${restaurant.name} ${city}`;
 
   const mapsLink = restaurant.placeId
-    ? `https://www.google.com/maps/search/?api=1&query_place_id=${restaurant.placeId}`
+    ? `https://www.google.com/maps/place/?q=place_id:${restaurant.placeId}`
     : restaurant.address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${restaurant.name}, ${restaurant.address}`)}`
     : '#';
