@@ -3,9 +3,9 @@
 
 import Image from 'next/image';
 import type { Restaurant } from '@/ai/flows/find-restaurants-with-ambiance'; // Importar el tipo Restaurant
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { MapPin, Phone, Star, ImageIcon, AlertTriangle, DollarSign, ExternalLink } from 'lucide-react';
+import { MapPin, Star, ImageIcon, AlertTriangle, DollarSign } from 'lucide-react';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -17,7 +17,6 @@ interface RestaurantCardProps {
 
 export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading, imageError }: RestaurantCardProps) {
   const displayRating = restaurant.rating ? Math.round(restaurant.rating * 2) / 2 : null; // Rounds to nearest 0.5
-  const cleanedPhoneNumber = restaurant.phoneNumber ? restaurant.phoneNumber.replace(/\D/g, '') : '';
 
   const renderImageContent = () => {
     if (isImageLoading) {
@@ -49,7 +48,7 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
         objectFit="cover"
         className={cn(
           "transition-transform duration-300 ease-in-out",
-          restaurant.websiteUrl && "group-hover:scale-105" 
+          "group-hover:scale-105"
         )}
         data-ai-hint={aiHint}
         onError={(e) => { 
@@ -65,22 +64,16 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
 
   const googleSearchQuery = `restaurant ${restaurant.name} ${city}`;
 
+  const mapsLink = restaurant.placeId
+    ? `https://www.google.com/maps/search/?api=1&query_place_id=${restaurant.placeId}`
+    : restaurant.address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${restaurant.name}, ${restaurant.address}`)}`
+    : '#';
+
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out flex flex-col h-full bg-card/80 backdrop-blur-sm">
-      <div className="relative w-full h-48 md:h-56">
-        {restaurant.websiteUrl ? (
-          <a
-            href={restaurant.websiteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Visitar el sitio web de ${restaurant.name}`}
-            className="block group h-full w-full"
-          >
-            {renderImageContent()}
-          </a>
-        ) : (
-          renderImageContent()
-        )}
+      <div className="relative w-full h-48 md:h-56 group">
+        {renderImageContent()}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
         <CardTitle className={cn(
           "absolute bottom-4 left-4 text-primary-foreground text-xl lg:text-2xl font-bold drop-shadow-md"
@@ -135,36 +128,19 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
           )}
 
            {restaurant.address && (
-            <div className="flex items-start text-sm text-muted-foreground mb-2"> {/* items-start para multilínea */}
-              <MapPin className="w-4 h-4 mr-2 text-accent shrink-0 mt-0.5" /> {/* mt-0.5 para alinear ícono */}
+            <a
+              href={mapsLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start text-sm text-muted-foreground mb-2 hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded"
+              title="Ver en Google Maps"
+            >
+              <MapPin className="w-4 h-4 mr-2 text-accent shrink-0 mt-0.5" />
               <span>{restaurant.address}</span>
-            </div>
+            </a>
            )}
-          {restaurant.phoneNumber && (
-            <div className="flex items-center text-sm text-muted-foreground mb-3">
-              <Phone className="w-4 h-4 mr-2 text-accent shrink-0" />
-              <a href={`tel:${cleanedPhoneNumber}`} className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded">
-                {restaurant.phoneNumber}
-              </a>
-            </div>
-          )}
-          {restaurant.websiteUrl && (
-             <div className="flex items-center text-sm text-muted-foreground mt-1">
-              <ExternalLink className="w-4 h-4 mr-2 text-accent shrink-0" />
-              <a 
-                href={restaurant.websiteUrl} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="hover:underline focus:outline-none focus:ring-1 focus:ring-accent rounded truncate"
-                title={restaurant.websiteUrl}
-              >
-                Visitar sitio web
-              </a>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
   );
 }
-
