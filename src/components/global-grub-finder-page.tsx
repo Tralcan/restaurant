@@ -31,6 +31,11 @@ interface RestaurantImageData {
   error?: string;
 }
 
+interface UserLocation {
+  latitude: number;
+  longitude: number;
+}
+
 export default function GlobalGrubFinderPage() {
   const [selectedCuisine, setSelectedCuisine] = useState<string>('');
   const [subCuisines, setSubCuisines] = useState<string[]>([ALL_SUBCUISINES_OPTION]);
@@ -38,6 +43,7 @@ export default function GlobalGrubFinderPage() {
   const [city, setCity] = useState<string>('');
   const [restaurants, setRestaurants] = useState<FindRestaurantsWithAmbianceOutput>([]);
   const [restaurantImageData, setRestaurantImageData] = useState<Record<string, RestaurantImageData>>({});
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   
   const [isSubCuisinesLoading, startSubCuisinesTransition] = useTransition();
   const [isRestaurantsLoading, startRestaurantsTransition] = useTransition();
@@ -45,6 +51,35 @@ export default function GlobalGrubFinderPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const { toast } = useToast();
+
+  // Get user location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.warn(`WARN: Error obteniendo la geolocalización (${error.code}): ${error.message}`);
+          toast({
+            title: 'Ubicación no disponible',
+            description: 'No se pudo obtener tu ubicación. La distancia a los restaurantes no se mostrará.',
+            variant: 'default',
+          });
+        }
+      );
+    } else {
+      console.warn('Geolocation no está soportado por este navegador.');
+       toast({
+        title: 'Ubicación no soportada',
+        description: 'Tu navegador no soporta la geolocalización. La distancia no se podrá calcular.',
+        variant: 'default',
+      });
+    }
+  }, [toast]);
 
   // Load city from localStorage on initial mount
   useEffect(() => {
@@ -360,6 +395,7 @@ export default function GlobalGrubFinderPage() {
                   imageDataUri={imageData?.dataUri}
                   isImageLoading={imageData?.loading}
                   imageError={imageData?.error}
+                  userLocation={userLocation}
                 />
               );
             })}
@@ -410,4 +446,3 @@ export default function GlobalGrubFinderPage() {
     </div>
   );
 }
-

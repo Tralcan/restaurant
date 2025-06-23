@@ -4,8 +4,8 @@
 import Image from 'next/image';
 import type { Restaurant } from '@/ai/flows/find-restaurants-with-ambiance'; // Importar el tipo Restaurant
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { MapPin, Star, ImageIcon, AlertTriangle, DollarSign } from 'lucide-react';
+import { cn, calculateDistance } from '@/lib/utils';
+import { MapPin, Star, ImageIcon, AlertTriangle, DollarSign, Navigation } from 'lucide-react';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -13,10 +13,20 @@ interface RestaurantCardProps {
   imageDataUri?: string;
   isImageLoading?: boolean;
   imageError?: string;
+  userLocation: { latitude: number; longitude: number; } | null;
 }
 
-export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading, imageError }: RestaurantCardProps) {
+export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading, imageError, userLocation }: RestaurantCardProps) {
   const displayRating = restaurant.rating ? Math.round(restaurant.rating * 2) / 2 : null; // Rounds to nearest 0.5
+  
+  const distance = userLocation && restaurant.location
+    ? calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        restaurant.location.lat,
+        restaurant.location.lng
+      )
+    : null;
 
   const renderImageContent = () => {
     if (isImageLoading) {
@@ -126,6 +136,14 @@ export function RestaurantCard({ restaurant, city, imageDataUri, isImageLoading,
               <span className="font-bold text-foreground">{restaurant.priceLevel}</span>
             </div>
           )}
+
+           {distance !== null && (
+            <div className="flex items-center text-sm text-muted-foreground mb-3">
+              <Navigation className="w-4 h-4 mr-2 text-accent shrink-0" />
+              <span className="font-semibold mr-1">Distancia:</span>
+              <span className="font-bold text-foreground">Aprox. {distance.toFixed(1)} km</span>
+            </div>
+           )}
 
            {restaurant.address && (
             <a

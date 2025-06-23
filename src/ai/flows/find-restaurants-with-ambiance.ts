@@ -27,13 +27,15 @@ const RestaurantSchema = z.object({
   name: z.string().describe('El nombre del restaurante.'),
   imageUrl: z.string().describe("URL de una imagen. DEBE ser 'https://placehold.co/600x400.png' inicialmente. Esta será reemplazada por una imagen generada por IA en el cliente."),
   address: z.string().optional().describe("La dirección formateada del restaurante."),
-  phoneNumber: z.string().optional().describe("El número de teléfono internacional formateado del restaurante. Proporcionar solo si se tiene alta confianza de su entrenamiento y corresponde a un negocio real y conocido EN LA CIUDAD ESPECIFICADA."),
-  websiteUrl: z.string().optional().describe('La URL del sitio web del restaurante. Proporcionar solo si se tiene alta confianza de su entrenamiento y corresponde a un negocio real y conocido EN LA CIUDAD ESPECIFICADA.'),
   description: z.string().optional().describe('Una breve descripción del restaurante, enfocada en el ambiente nocturno.'),
   rating: z.number().min(0).max(5).optional().describe('La calificación promedio del restaurante, de 0 a 5 estrellas.'),
   reviewCount: z.number().int().min(0).optional().describe('El número total de reseñas que tiene el restaurante.'),
   priceLevel: z.enum(['$', '$$', '$$$', '$$$$', 'Desconocido']).optional().describe("El nivel de precios del restaurante."),
   placeId: z.string().optional().describe("El ID de Google Places del restaurante."),
+  location: z.object({
+    lat: z.number(),
+    lng: z.number(),
+  }).optional().describe("Las coordenadas geográficas (latitud, longitud) del restaurante."),
 });
 export type Restaurant = z.infer<typeof RestaurantSchema>;
 
@@ -82,8 +84,8 @@ const searchGooglePlacesTool = ai.defineTool({
             const detailsResponse = await googleMapsClient.placeDetails({
                 params: {
                     place_id: place.place_id,
-                    // Campos solicitados: Basic Data y Atmosphere Data. Se omite Contact Data.
-                    fields: ['name', 'formatted_address', 'rating', 'user_ratings_total', 'price_level', 'place_id'],
+                    // Campos solicitados: Basic Data, Atmosphere Data y Geometry.
+                    fields: ['name', 'formatted_address', 'rating', 'user_ratings_total', 'price_level', 'place_id', 'geometry'],
                     key: apiKey,
                     language: 'es',
                 }
@@ -109,13 +111,12 @@ const searchGooglePlacesTool = ai.defineTool({
         name: currentPlace.name || 'Nombre no disponible',
         imageUrl: 'https://placehold.co/600x400.png', 
         address: currentPlace.formatted_address,
-        phoneNumber: undefined, // Ya no se solicita de la API
-        websiteUrl: undefined, // Ya no se solicita de la API
         rating: currentPlace.rating,
         reviewCount: currentPlace.user_ratings_total,
         priceLevel: priceLevelString,
         description: '', 
         placeId: currentPlace.place_id,
+        location: currentPlace.geometry?.location,
       };
     });
     return Promise.all(restaurantPromises);
@@ -194,4 +195,3 @@ const findRestaurantsWithAmbianceFlow = ai.defineFlow(
     return findRestaurantsWithAmbiance(input);
   }
 );
-
